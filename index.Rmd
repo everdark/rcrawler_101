@@ -1,0 +1,59 @@
+---
+title: "R Crawler 101"
+subtitle: ""
+author: 
+    name: "Kyle Chung"
+    affiliation: "Trend Micro, Data Scientist"
+    email: "kylechun9@gmail.com"
+    website: "https://github.com/everdark"
+date: '`r format(Sys.time(), "%d %B, %Y")`'
+output: 
+    html_document:
+      theme: united
+      toc: yes
+abstract: This is the abstract.
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(cache=FALSE)
+options(width=120)
+library(data.table)
+library(stringr)
+library(httr)
+```
+
+----------------------
+## Facebook Graph API | Introduction
+### the UI for exploration
++ [Facebook Graph API Explorer](https://developers.facebook.com/tools/explorer)
++ need a valid *access token*
++ the token will expire in hour (can be refresh)
+
+### components of the API
++ nodes
+    + *objects*: a User, a Photo, a Page, a Comment, ...
++ edegs
+    + *connections* between objects
++ fields
+    + *information* about objects
+
+### baisc syntax
+`/<node_id>/<edge_name>?fields=f1,f2,...`
+
++ try the special `me` node: `me/photos?fields=from`
+
+## Facebook Graph API | Crawling
+## Regular Expression
+## Regular Expression in R
+
+
+### Appendix
+
+```{r sessionInfo}
+sessionInfo()
+```
+
+
+### References
+
+
