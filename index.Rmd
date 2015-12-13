@@ -14,13 +14,14 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(cache=FALSE)
+knitr::opts_chunk$set(cache=TRUE)
 options(width=120)
 library(data.table)
 library(magrittr)
 library(parallel)
 library(ggplot2)
 library(stringr)
+library(rvest)
 library(httr)
 ```
 
@@ -169,7 +170,7 @@ library("httr")
 api_addr <- "https://graph.facebook.com/v2.4/me"
 
 # a valid token
-token <- "CAACEdEose0cBAFEVJ8DsWaMJvRaVflhJrI4FfKeb4nroqiN44ND0uhj5WpNFSMGTCcQUYw7AEUkt3pbiX5Ilcpdto90oMaPyEZBOHAnLDJCZCB5ZA3FrLuVzWGLdNQ6xdVpYMZBhyEhAeR9L4NK2uyc43Anp9eZBRW6zc0RAFay206UFY7FKTNOluSiZA4OZBeNhY27NmSk1QZDZD"
+token <- "CAACEdEose0cBAEti9g4OOMHsKz3lbcZA8QEB0wOpxWq3OLZC3pI7HFKUQrOZAXMi2pENeyBP6VZBZAEukJSJiASaGOaB24pA3zYpwZAxtBPWNhPsZCXfmmkmN3FFKdcwrxgG9piZAKZBmtyievARFlsxGjBiepumtTUZCiYvSs1ZCK36QSRbvRbJ7TI2O3PnausI4DF2J7UpWRdcAZDZD"
 
 # build the query string for the GET method
 qs <- list(metadata=1, access_token=token)
@@ -410,7 +411,7 @@ getLikes(pid=getPostId("2015-01-01", token=token)$pid[1], token=token) %>% head
 5. check results
 
 ```{r run}
-all_posts <- getPostId("2015-01-01", token=token) %>%
+all_posts <- getPostId("2014-01-01", token=token) %>%
     .[, list(time=max(time)), by="pid"]
 
 all_likes <- lapply(all_posts$pid, getLikes, token=token) %>%
@@ -608,11 +609,154 @@ deletePost(test_pid, token=token)
 ```
 
 ## Regular Expression
+
+### > what is it?
+> ...a sequence of characters that define a search pattern, mainly for use in pattern matching with strings, or string matching, i.e. "find and replace"-like operations.
+<br><br>-wikipedia
+
+### > why we need it?
++ sometimes only CSS selector/XPath is not enough
+    + contents may not be *structurally* distingushable
+    + but can be distinguished by *string pattern*
+
+> 有沒有⋯⋯的八卦？
+
+![alt text](img/gossip.png)
+
++ in the above example, all "title"s are treated *equally* in html structure
+    + what if you'd like to only crawl *specific* titles?
+    + here comes the Regular Expression!
+
+### > a quick journey
+
+https://regex101.com/#python
+
+### > basic components of RE
+
 ## Regular Expression in R
 
+### > `base::grep` and `base::grepl`
 
-### Appendix
+```{r grep}
+grep
+```
 
-### References
+### > `base::gsub`
+
+```{r gsub}
+gsub
+```
+
+### > the `stringr` library
++ why use it?
+    + more intuitive than the built-in RE facilities
+    + developed by [Hadley Wickham](https://github.com/hadley/stringr)
+        + who also writes `httr`, and many others
+
+```{r load stringr}
+if ( ! "stringr" %in% rownames(installed.packages()) )
+    install.packages("stringr")
+library("stringr")
+```
+
+#### >> usage: `str_extract` and `str_extract_all`
+
+#### >> usage: `str_match` and `str_match_all`
+
+### > Exercise: PTT Gossiping Pattern Match
+
+```{r ptt gossip}
+if ( ! "rvest" %in% rownames(installed.packages()) )
+    install.packages("rvest")
+library("rvest")
+
+# firstly, crawl the fron page
+gossip <- GET("https://www.ptt.cc/bbs/Gossiping/index.html",
+              set_cookies(over18=1))$content %>% read_html
+
+# then locate the paging index
+lastpage_idx <- gossip %>% html_nodes("div .btn.wide") %>%
+    grep("上頁", ., value=TRUE) %>% {
+        str_match(., "index([0-9]+)\\.html")[,2]
+    }
+
+# try some
+(gossip_titles <- gossip %>% 
+    html_nodes("div .title") %>% 
+    html_text())
+grep("[公告]", gossip_titles, value=TRUE)
+
+# now make a comprehensive function for multi-page crawling
+crawlGossip <- function(npage, pat) {
+    
+    require(parallel)
+    require(rvest)
+    require(httr)
+    
+    # make it fast by parallelling
+    cl <- makeCluster(detectCores())
+    on.exit(stopCluster(cl))
+    
+    # crawl front page
+    gossip <- GET("https://www.ptt.cc/bbs/Gossiping/index.html",
+              set_cookies(over18=1))$content %>% read_html
+    
+    # get page index
+    lastpage_idx <- gossip %>% html_nodes("div .btn.wide") %>%
+        grep("上頁", ., value=TRUE) %>% {
+            as.integer(str_match(., "index([0-9]+)\\.html")[,2])
+        }
+    all_pages <- sprintf("https://www.ptt.cc/bbs/Gossiping/index%s.html",
+                         (lastpage_idx+1):(lastpage_idx-npage+2))
+    
+    # grep titles with given regex
+    oneshot <- function(page_url, ...) {
+        require(rvest)
+        require(httr)
+        gossip <- GET(page_url,
+                  set_cookies(over18=1))$content %>% 
+            read_html %>% 
+            html_nodes("div .title") %>% 
+            html_text() %>%
+            gsub("\n\t*", '', .) %>%
+            grep(pat, ., value=TRUE) 
+    }
+    res <- parLapplyLB(cl, all_pages, oneshot)
+    res[sapply(res, function(x) length(x) > 0)] %>% 
+        unlist
+}
+
+wanted <- crawlGossip(100, "^\\[問卦\\] 有沒有.*的八卦？")
+wanted
+```
+
+```{r wordcloud, message=FALSE}
+# not enough? let's do some visualization
+library(RColorBrewer)
+library(wordcloud)
+buzz <- str_match(wanted, "有沒有(.*)的八卦？")[,2] %T>% 
+    {
+        par(family='Heiti TC Light')
+        wordcloud(., min.freq=1, rot.per=.5, scale=c(1,2), 
+                  random.color=TRUE, colors=palette()) 
+    }
+```
+
+## Appendix
 
 
+## References
++ Facebook Graph API [official doc](https://developers.facebook.com/docs/graph-api)
++ [stringr vignettes](https://cran.r-project.org/web/packages/stringr/vignettes/stringr.html)
++ [httr quickstart guide](https://cran.r-project.org/web/packages/httr/vignettes/quickstart.html)
+
+## Other Useful Materials
++ learning R: a programmer-oriented introduction
+    + [everdark/lecture_rintro](http://everdark.github.io/lecture_rintro/)
++ learning `data.table`
+    + [mansunkuo/dsc2015_data.table](http://mansunkuo.github.io/dsc2015_data.table/#1)
+    + [the data.table cheatsheet](http://www.r-bloggers.com/the-data-table-cheat-sheet/)
++ learning `ggplot2`
+    + [everdark/ggplot2_lecture_dsc2015](http://everdark.github.io/ggplot2_lecture_dsc2015/)
++ same materials but in Python
+    + [everdark/pycrawler_101](http://everdark.github.io/pycrawler_101/#/)
