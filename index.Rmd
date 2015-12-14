@@ -3,7 +3,7 @@ title: "R Crawler 101: Week 3"
 subtitle: "play with facebook API and regular expression"
 author: 
     name: "Kyle Chung"
-    affiliation: "Trend Micro, Data Scientist"
+    affiliation: "Data Scientist, Trend Micro"
     email: "kylechun9@gmail.com"
     website: "https://github.com/everdark"
 date: '`r format(Sys.time(), "%d %B, %Y")`'
