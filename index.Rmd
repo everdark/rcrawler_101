@@ -745,7 +745,7 @@ wanted <- wanted[grep("爆", nrec), cnt := 150L] %>%
     .[is.na(cnt), cnt:=as.integer(nrec)]
 ```
 
-```{r wordcloud, message=FALSE}
+```{r wordcloud, message=FALSE, warning=FALSE}
 # not enough? let's do some visualization
 library(RColorBrewer)
 library(wordcloud)
