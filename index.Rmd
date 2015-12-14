@@ -775,6 +775,7 @@ grep("^h|^你", test_str, value=TRUE)
     + the special meaning, if any, is said to be escaped
     + escaper must be *doubled* in R
         + due to language implementation
+        + may not be the case for using re in other languageg
         
 ```{r re basics: `\`}
 grep("^\\^", "^123", value=TRUE)
@@ -793,22 +794,48 @@ grep("^\\^", "^123", value=TRUE)
 ## Regular Expression facilities in R
 
 ### > `base::grep` and `base::grepl`
++ `grep`: match and return
+    + it is vectorized
+    + can return either **numeric index** or **original charaters**
+    + or return **logical vector** by using `grepl`
 
 ```{r grep}
-grep
+# return numeric index
+grep("^Re: ", gossip_titles_cleansed)
+
+# then can used as selecting vector
+gossip_titles_cleansed[grep("^Re: ", gossip_titles_cleansed)]
+
+# which effectively equals...
+grep("^Re: ", gossip_titles_cleansed, value=TRUE)
+
+# the no-match case
+grep("1p3fjhi1o", gossip_titles_cleansed)
+grep("1p3fjhi1o", gossip_titles_cleansed, value=TRUE)
+
+# the fixed patter: no re, all as-is
+grep("^Re: ", gossip_titles_cleansed, value=TRUE, fixed=TRUE)
+
+identical(grep("[新聞]", gossip_titles_cleansed, value=TRUE, fixed=TRUE),
+          grep("\\[新聞\\]", gossip_titles_cleansed, value=TRUE, fixed=FALSE))
 ```
 
 ### > `base::gsub`
++ **find and replace all**
+    + use `sub` to replace only once
++ also very useful for **find-and-delete all** scenario
 
 ```{r gsub}
-gsub
+gsub("\\].*", '', gossip_titles_cleansed)
+gsub("^.*\\[", '', gossip_titles_cleansed)
+gsub("\\].*|^.*\\[", '', gossip_titles_cleansed)
 ```
 
 ### > the `stringr` library
 + why use it?
     + more intuitive than the built-in RE facilities
     + developed by [Hadley Wickham](https://github.com/hadley/stringr)
-        + who also writes `httr`, and many others
+        + who also writes `httr`, `ggplot2`, and many others
 
 ```{r load stringr}
 if ( ! "stringr" %in% rownames(installed.packages()) )
@@ -817,8 +844,41 @@ library("stringr")
 ```
 
 #### >> usage: `str_extract` and `str_extract_all`
++ to match and full-pattern extract
++ can do many-to-many pattern matching, with recycling
+
+```{r stringr extract}
+# only the matched part will be returned; no-match resolves to NA
+str_extract(gossip_titles_cleansed, "\\[問卦\\]")
+str_extract(gossip_titles_cleansed, "\\[問卦\\].*")
+str_extract(gossip_titles_cleansed, "^\\[問卦\\] [A-Za-z]+")
+
+# match (amd extract) multiple times
+str_extract_all(gossip_titles_cleansed, "有", simplify=TRUE)
+
+# many-to-many pattern matching (with recycling)
+str_extract(letters, rep("[a-g]", 26))
+str_extract(letters, rep("[a-g]", 13))
+str_extract(letters, rep("[a-g]", 52))
+```
 
 #### >> usage: `str_match` and `str_match_all`
++ to match and partial-pattern extract
++ returned object is in compact matrix form
+
+```{r stringr match}
+# without grouper
+str_match(gossip_titles_cleansed, "\\[.*\\]")
+
+# with grouper
+str_match(gossip_titles_cleansed, "\\[(.*)\\]")
+str_match(gossip_titles_cleansed, "Re: \\[(.*)\\]")
+str_match(gossip_titles_cleansed, "\\[(.?)(.?)\\]")
+
+# mathc once or many times
+gossip_titles_cleansed %>% head %>% str_match("[a-z]")
+gossip_titles_cleansed %>% head %>% str_match_all("[a-z]")
+```
 
 ### > Exercise: PTT Gossiping Pattern Match
 

@@ -1214,6 +1214,7 @@ test_str2 %&gt;% grep(&quot;^hello$&quot;, ., value=TRUE)</code></pre>
 <li>escaper must be <em>doubled</em> in R
 <ul>
 <li>due to language implementation</li>
+<li>may not be the case for using re in other languageg</li>
 </ul></li>
 </ul></li>
 </ul>
@@ -1239,31 +1240,60 @@ test_str2 %&gt;% grep(&quot;^hello$&quot;, ., value=TRUE)</code></pre>
 <h2>Regular Expression facilities in R</h2>
 <div id="basegrep-and-basegrepl" class="section level3">
 <h3>&gt; <code>base::grep</code> and <code>base::grepl</code></h3>
-<pre class="r"><code>grep</code></pre>
-<pre><code>## function (pattern, x, ignore.case = FALSE, perl = FALSE, value = FALSE, 
-##     fixed = FALSE, useBytes = FALSE, invert = FALSE) 
-## {
-##     if (!is.character(x)) 
-##         x &lt;- structure(as.character(x), names = names(x))
-##     .Internal(grep(as.character(pattern), x, ignore.case, value, 
-##         perl, fixed, useBytes, invert))
-## }
-## &lt;bytecode: 0x7fecb43cb1f0&gt;
-## &lt;environment: namespace:base&gt;</code></pre>
+<ul>
+<li><code>grep</code>: match and return
+<ul>
+<li>it is vectorized</li>
+<li>can return either <strong>numeric index</strong> or <strong>original charaters</strong></li>
+<li>or return <strong>logical vector</strong> by using <code>grepl</code></li>
+</ul></li>
+</ul>
+<pre class="r"><code># return numeric index
+grep(&quot;^Re: &quot;, gossip_titles_cleansed)</code></pre>
+<pre><code>## [1]  3  5  9 10</code></pre>
+<pre class="r"><code># then can used as selecting vector
+gossip_titles_cleansed[grep(&quot;^Re: &quot;, gossip_titles_cleansed)]</code></pre>
+<pre><code>## [1] &quot;Re: [爆卦] 夢到COSTCO老闆要來桃園南崁店&quot;          &quot;Re: [問卦] 秒買秒退事件至今的立場轉變?&quot;          
+## [3] &quot;Re: [ＦＢ] 人渣文本-很多首投族覺得局面沒必要投票&quot; &quot;Re: [新聞] 防彈衣「罩不住」 女警怨：胸都壓平了&quot;</code></pre>
+<pre class="r"><code># which effectively equals...
+grep(&quot;^Re: &quot;, gossip_titles_cleansed, value=TRUE)</code></pre>
+<pre><code>## [1] &quot;Re: [爆卦] 夢到COSTCO老闆要來桃園南崁店&quot;          &quot;Re: [問卦] 秒買秒退事件至今的立場轉變?&quot;          
+## [3] &quot;Re: [ＦＢ] 人渣文本-很多首投族覺得局面沒必要投票&quot; &quot;Re: [新聞] 防彈衣「罩不住」 女警怨：胸都壓平了&quot;</code></pre>
+<pre class="r"><code># the no-match case
+grep(&quot;1p3fjhi1o&quot;, gossip_titles_cleansed)</code></pre>
+<pre><code>## integer(0)</code></pre>
+<pre class="r"><code>grep(&quot;1p3fjhi1o&quot;, gossip_titles_cleansed, value=TRUE)</code></pre>
+<pre><code>## character(0)</code></pre>
+<pre class="r"><code># the fixed patter: no re, all as-is
+grep(&quot;^Re: &quot;, gossip_titles_cleansed, value=TRUE, fixed=TRUE)</code></pre>
+<pre><code>## character(0)</code></pre>
+<pre class="r"><code>identical(grep(&quot;[新聞]&quot;, gossip_titles_cleansed, value=TRUE, fixed=TRUE),
+          grep(&quot;\\[新聞\\]&quot;, gossip_titles_cleansed, value=TRUE, fixed=FALSE))</code></pre>
+<pre><code>## [1] TRUE</code></pre>
 </div>
 <div id="basegsub" class="section level3">
 <h3>&gt; <code>base::gsub</code></h3>
-<pre class="r"><code>gsub</code></pre>
-<pre><code>## function (pattern, replacement, x, ignore.case = FALSE, perl = FALSE, 
-##     fixed = FALSE, useBytes = FALSE) 
-## {
-##     if (!is.character(x)) 
-##         x &lt;- as.character(x)
-##     .Internal(gsub(as.character(pattern), as.character(replacement), 
-##         x, ignore.case, perl, fixed, useBytes))
-## }
-## &lt;bytecode: 0x7fecb4183df8&gt;
-## &lt;environment: namespace:base&gt;</code></pre>
+<ul>
+<li><strong>find and replace all</strong>
+<ul>
+<li>use <code>sub</code> to replace only once</li>
+</ul></li>
+<li>also very useful for <strong>find-and-delete all</strong> scenario</li>
+</ul>
+<pre class="r"><code>gsub(&quot;\\].*&quot;, '', gossip_titles_cleansed)</code></pre>
+<pre><code>##  [1] &quot;[問卦&quot;     &quot;[問卦&quot;     &quot;Re: [爆卦&quot; &quot;[問卦&quot;     &quot;Re: [問卦&quot; &quot;[問卦&quot;     &quot;[問卦&quot;     &quot;[新聞&quot;     &quot;Re: [ＦＢ&quot;
+## [10] &quot;Re: [新聞&quot; &quot;[公告&quot;     &quot;[徵求&quot;     &quot;[徵求&quot;     &quot;[公告&quot;     &quot;[公告&quot;</code></pre>
+<pre class="r"><code>gsub(&quot;^.*\\[&quot;, '', gossip_titles_cleansed)</code></pre>
+<pre><code>##  [1] &quot;問卦] 日本鮮奶vs台灣鮮奶？&quot;                   &quot;問卦] 大家坐車遇到很吵的屁孩會?&quot;             
+##  [3] &quot;爆卦] 夢到COSTCO老闆要來桃園南崁店&quot;           &quot;問卦]有沒有猴抓妹ㄈㄈ尺又偷包都沒事的掛&quot;     
+##  [5] &quot;問卦] 秒買秒退事件至今的立場轉變?&quot;            &quot;問卦] 有沒有兩津勘吉月薪多少的卦？&quot;          
+##  [7] &quot;問卦] 亞當斯密如何解決需求?&quot;                  &quot;新聞] 中國大陸維權律師浦志強案 北京開審&quot;     
+##  [9] &quot;ＦＢ] 人渣文本-很多首投族覺得局面沒必要投票&quot;  &quot;新聞] 防彈衣「罩不住」 女警怨：胸都壓平了&quot;   
+## [11] &quot;公告] 八卦板板規(2015.12.01)&quot;                 &quot;徵求]12/5 22點北市承德路五段洲美街口車禍影像&quot;
+## [13] &quot;徵求] 12/6傍晚北市承德路六段往大度路行車記錄&quot; &quot;公告] 十二月置底閒聊區&quot;                      
+## [15] &quot;公告] 2015年「代表字」與「代表成語」推薦開始&quot;</code></pre>
+<pre class="r"><code>gsub(&quot;\\].*|^.*\\[&quot;, '', gossip_titles_cleansed)</code></pre>
+<pre><code>##  [1] &quot;問卦&quot; &quot;問卦&quot; &quot;爆卦&quot; &quot;問卦&quot; &quot;問卦&quot; &quot;問卦&quot; &quot;問卦&quot; &quot;新聞&quot; &quot;ＦＢ&quot; &quot;新聞&quot; &quot;公告&quot; &quot;徵求&quot; &quot;徵求&quot; &quot;公告&quot; &quot;公告&quot;</code></pre>
 </div>
 <div id="the-stringr-library" class="section level3">
 <h3>&gt; the <code>stringr</code> library</h3>
@@ -1273,7 +1303,7 @@ test_str2 %&gt;% grep(&quot;^hello$&quot;, ., value=TRUE)</code></pre>
 <li>more intuitive than the built-in RE facilities</li>
 <li>developed by <a href="https://github.com/hadley/stringr">Hadley Wickham</a>
 <ul>
-<li>who also writes <code>httr</code>, and many others</li>
+<li>who also writes <code>httr</code>, <code>ggplot2</code>, and many others</li>
 </ul></li>
 </ul></li>
 </ul>
@@ -1282,9 +1312,197 @@ test_str2 %&gt;% grep(&quot;^hello$&quot;, ., value=TRUE)</code></pre>
 library(&quot;stringr&quot;)</code></pre>
 <div id="usage-str_extract-and-str_extract_all" class="section level4">
 <h4>&gt;&gt; usage: <code>str_extract</code> and <code>str_extract_all</code></h4>
+<ul>
+<li>to match and full-pattern extract</li>
+<li>can do many-to-many pattern matching, with recycling</li>
+</ul>
+<pre class="r"><code># only the matched part will be returned; no-match resolves to NA
+str_extract(gossip_titles_cleansed, &quot;\\[問卦\\]&quot;)</code></pre>
+<pre><code>##  [1] &quot;[問卦]&quot; &quot;[問卦]&quot; NA       &quot;[問卦]&quot; &quot;[問卦]&quot; &quot;[問卦]&quot; &quot;[問卦]&quot; NA       NA       NA       NA       NA      
+## [13] NA       NA       NA</code></pre>
+<pre class="r"><code>str_extract(gossip_titles_cleansed, &quot;\\[問卦\\].*&quot;)</code></pre>
+<pre><code>##  [1] &quot;[問卦] 日本鮮奶vs台灣鮮奶？&quot;              &quot;[問卦] 大家坐車遇到很吵的屁孩會?&quot;        
+##  [3] NA                                         &quot;[問卦]有沒有猴抓妹ㄈㄈ尺又偷包都沒事的掛&quot;
+##  [5] &quot;[問卦] 秒買秒退事件至今的立場轉變?&quot;       &quot;[問卦] 有沒有兩津勘吉月薪多少的卦？&quot;     
+##  [7] &quot;[問卦] 亞當斯密如何解決需求?&quot;             NA                                        
+##  [9] NA                                         NA                                        
+## [11] NA                                         NA                                        
+## [13] NA                                         NA                                        
+## [15] NA</code></pre>
+<pre class="r"><code>str_extract(gossip_titles_cleansed, &quot;^\\[問卦\\] [A-Za-z]+&quot;)</code></pre>
+<pre><code>##  [1] NA NA NA NA NA NA NA NA NA NA NA NA NA NA NA</code></pre>
+<pre class="r"><code># match (amd extract) multiple times
+str_extract_all(gossip_titles_cleansed, &quot;有&quot;, simplify=TRUE)</code></pre>
+<pre><code>##       [,1] [,2]
+##  [1,] &quot;&quot;   &quot;&quot;  
+##  [2,] &quot;&quot;   &quot;&quot;  
+##  [3,] &quot;&quot;   &quot;&quot;  
+##  [4,] &quot;有&quot; &quot;有&quot;
+##  [5,] &quot;&quot;   &quot;&quot;  
+##  [6,] &quot;有&quot; &quot;有&quot;
+##  [7,] &quot;&quot;   &quot;&quot;  
+##  [8,] &quot;&quot;   &quot;&quot;  
+##  [9,] &quot;&quot;   &quot;&quot;  
+## [10,] &quot;&quot;   &quot;&quot;  
+## [11,] &quot;&quot;   &quot;&quot;  
+## [12,] &quot;&quot;   &quot;&quot;  
+## [13,] &quot;&quot;   &quot;&quot;  
+## [14,] &quot;&quot;   &quot;&quot;  
+## [15,] &quot;&quot;   &quot;&quot;</code></pre>
+<pre class="r"><code># many-to-many pattern matching (with recycling)
+str_extract(letters, rep(&quot;[a-g]&quot;, 26))</code></pre>
+<pre><code>##  [1] &quot;a&quot; &quot;b&quot; &quot;c&quot; &quot;d&quot; &quot;e&quot; &quot;f&quot; &quot;g&quot; NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA</code></pre>
+<pre class="r"><code>str_extract(letters, rep(&quot;[a-g]&quot;, 13))</code></pre>
+<pre><code>##  [1] &quot;a&quot; &quot;b&quot; &quot;c&quot; &quot;d&quot; &quot;e&quot; &quot;f&quot; &quot;g&quot; NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA</code></pre>
+<pre class="r"><code>str_extract(letters, rep(&quot;[a-g]&quot;, 52))</code></pre>
+<pre><code>##  [1] &quot;a&quot; &quot;b&quot; &quot;c&quot; &quot;d&quot; &quot;e&quot; &quot;f&quot; &quot;g&quot; NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  &quot;a&quot; &quot;b&quot; &quot;c&quot;
+## [30] &quot;d&quot; &quot;e&quot; &quot;f&quot; &quot;g&quot; NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA</code></pre>
 </div>
 <div id="usage-str_match-and-str_match_all" class="section level4">
 <h4>&gt;&gt; usage: <code>str_match</code> and <code>str_match_all</code></h4>
+<ul>
+<li>to match and partial-pattern extract</li>
+<li>returned object is in compact matrix form</li>
+</ul>
+<pre class="r"><code># without grouper
+str_match(gossip_titles_cleansed, &quot;\\[.*\\]&quot;)</code></pre>
+<pre><code>##       [,1]    
+##  [1,] &quot;[問卦]&quot;
+##  [2,] &quot;[問卦]&quot;
+##  [3,] &quot;[爆卦]&quot;
+##  [4,] &quot;[問卦]&quot;
+##  [5,] &quot;[問卦]&quot;
+##  [6,] &quot;[問卦]&quot;
+##  [7,] &quot;[問卦]&quot;
+##  [8,] &quot;[新聞]&quot;
+##  [9,] &quot;[ＦＢ]&quot;
+## [10,] &quot;[新聞]&quot;
+## [11,] &quot;[公告]&quot;
+## [12,] &quot;[徵求]&quot;
+## [13,] &quot;[徵求]&quot;
+## [14,] &quot;[公告]&quot;
+## [15,] &quot;[公告]&quot;</code></pre>
+<pre class="r"><code># with grouper
+str_match(gossip_titles_cleansed, &quot;\\[(.*)\\]&quot;)</code></pre>
+<pre><code>##       [,1]     [,2]  
+##  [1,] &quot;[問卦]&quot; &quot;問卦&quot;
+##  [2,] &quot;[問卦]&quot; &quot;問卦&quot;
+##  [3,] &quot;[爆卦]&quot; &quot;爆卦&quot;
+##  [4,] &quot;[問卦]&quot; &quot;問卦&quot;
+##  [5,] &quot;[問卦]&quot; &quot;問卦&quot;
+##  [6,] &quot;[問卦]&quot; &quot;問卦&quot;
+##  [7,] &quot;[問卦]&quot; &quot;問卦&quot;
+##  [8,] &quot;[新聞]&quot; &quot;新聞&quot;
+##  [9,] &quot;[ＦＢ]&quot; &quot;ＦＢ&quot;
+## [10,] &quot;[新聞]&quot; &quot;新聞&quot;
+## [11,] &quot;[公告]&quot; &quot;公告&quot;
+## [12,] &quot;[徵求]&quot; &quot;徵求&quot;
+## [13,] &quot;[徵求]&quot; &quot;徵求&quot;
+## [14,] &quot;[公告]&quot; &quot;公告&quot;
+## [15,] &quot;[公告]&quot; &quot;公告&quot;</code></pre>
+<pre class="r"><code>str_match(gossip_titles_cleansed, &quot;Re: \\[(.*)\\]&quot;)</code></pre>
+<pre><code>##       [,1]         [,2]  
+##  [1,] NA           NA    
+##  [2,] NA           NA    
+##  [3,] &quot;Re: [爆卦]&quot; &quot;爆卦&quot;
+##  [4,] NA           NA    
+##  [5,] &quot;Re: [問卦]&quot; &quot;問卦&quot;
+##  [6,] NA           NA    
+##  [7,] NA           NA    
+##  [8,] NA           NA    
+##  [9,] &quot;Re: [ＦＢ]&quot; &quot;ＦＢ&quot;
+## [10,] &quot;Re: [新聞]&quot; &quot;新聞&quot;
+## [11,] NA           NA    
+## [12,] NA           NA    
+## [13,] NA           NA    
+## [14,] NA           NA    
+## [15,] NA           NA</code></pre>
+<pre class="r"><code>str_match(gossip_titles_cleansed, &quot;\\[(.?)(.?)\\]&quot;)</code></pre>
+<pre><code>##       [,1]     [,2] [,3]
+##  [1,] &quot;[問卦]&quot; &quot;問&quot; &quot;卦&quot;
+##  [2,] &quot;[問卦]&quot; &quot;問&quot; &quot;卦&quot;
+##  [3,] &quot;[爆卦]&quot; &quot;爆&quot; &quot;卦&quot;
+##  [4,] &quot;[問卦]&quot; &quot;問&quot; &quot;卦&quot;
+##  [5,] &quot;[問卦]&quot; &quot;問&quot; &quot;卦&quot;
+##  [6,] &quot;[問卦]&quot; &quot;問&quot; &quot;卦&quot;
+##  [7,] &quot;[問卦]&quot; &quot;問&quot; &quot;卦&quot;
+##  [8,] &quot;[新聞]&quot; &quot;新&quot; &quot;聞&quot;
+##  [9,] &quot;[ＦＢ]&quot; &quot;Ｆ&quot; &quot;Ｂ&quot;
+## [10,] &quot;[新聞]&quot; &quot;新&quot; &quot;聞&quot;
+## [11,] &quot;[公告]&quot; &quot;公&quot; &quot;告&quot;
+## [12,] &quot;[徵求]&quot; &quot;徵&quot; &quot;求&quot;
+## [13,] &quot;[徵求]&quot; &quot;徵&quot; &quot;求&quot;
+## [14,] &quot;[公告]&quot; &quot;公&quot; &quot;告&quot;
+## [15,] &quot;[公告]&quot; &quot;公&quot; &quot;告&quot;</code></pre>
+<pre class="r"><code># mathc once or many times
+str_match(gossip_titles_cleansed, &quot;[a-z]&quot;)</code></pre>
+<pre><code>##       [,1]
+##  [1,] &quot;v&quot; 
+##  [2,] NA  
+##  [3,] &quot;e&quot; 
+##  [4,] NA  
+##  [5,] &quot;e&quot; 
+##  [6,] NA  
+##  [7,] NA  
+##  [8,] NA  
+##  [9,] &quot;e&quot; 
+## [10,] &quot;e&quot; 
+## [11,] NA  
+## [12,] NA  
+## [13,] NA  
+## [14,] NA  
+## [15,] NA</code></pre>
+<pre class="r"><code>str_match_all(gossip_titles_cleansed, &quot;[a-z]&quot;) # return a list of matrix</code></pre>
+<pre><code>## [[1]]
+##      [,1]
+## [1,] &quot;v&quot; 
+## [2,] &quot;s&quot; 
+## 
+## [[2]]
+##      [,1]
+## 
+## [[3]]
+##      [,1]
+## [1,] &quot;e&quot; 
+## 
+## [[4]]
+##      [,1]
+## 
+## [[5]]
+##      [,1]
+## [1,] &quot;e&quot; 
+## 
+## [[6]]
+##      [,1]
+## 
+## [[7]]
+##      [,1]
+## 
+## [[8]]
+##      [,1]
+## 
+## [[9]]
+##      [,1]
+## [1,] &quot;e&quot; 
+## 
+## [[10]]
+##      [,1]
+## [1,] &quot;e&quot; 
+## 
+## [[11]]
+##      [,1]
+## 
+## [[12]]
+##      [,1]
+## 
+## [[13]]
+##      [,1]
+## 
+## [[14]]
+##      [,1]
+## 
+## [[15]]
+##      [,1]</code></pre>
 </div>
 </div>
 <div id="exercise-ptt-gossiping-pattern-match" class="section level3">
