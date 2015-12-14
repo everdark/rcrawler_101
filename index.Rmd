@@ -16,7 +16,9 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(cache=TRUE)
 options(width=120)
+library(RColorBrewer)
 library(data.table)
+library(wordcloud)
 library(magrittr)
 library(parallel)
 library(ggplot2)
