@@ -459,7 +459,7 @@ like_trending2 <- all_likes[, list(n_like=.N), by="name,timed"]
 top_likes <- all_likes[, list(n_like=.N), by="name"] %>% setorder(-n_like)
 ```
 
-```{r plot: ggplot2, warning=FALSE}
+```{r plot: ggplot2, fig.width=10, warning=FALSE}
 like_trending1 %>% 
     ggplot(aes(x=timed, y=n_like)) + geom_line() + geom_point()
 
