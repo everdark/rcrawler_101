@@ -170,7 +170,7 @@ library("httr")
 api_addr <- "https://graph.facebook.com/v2.4/me"
 
 # a valid token
-token <- "CAACEdEose0cBAEti9g4OOMHsKz3lbcZA8QEB0wOpxWq3OLZC3pI7HFKUQrOZAXMi2pENeyBP6VZBZAEukJSJiASaGOaB24pA3zYpwZAxtBPWNhPsZCXfmmkmN3FFKdcwrxgG9piZAKZBmtyievARFlsxGjBiepumtTUZCiYvSs1ZCK36QSRbvRbJ7TI2O3PnausI4DF2J7UpWRdcAZDZD"
+token <- "CAACEdEose0cBAFyHVA9ZCAW3doie9gJvrX650QZAllaZBt3BwowO5fTSAIPraNLjEaqa7jiUm1BWBvjcSfGBfUFzeUZC393GMR0GKDRZAoJvl0nVeXH6EaMZBL22ZBeBAFZAWmSZBrBdfpq1m2zekLKyZB3XG4J4tMNbZCqLZAoBfazk2Ma2KQsZAC6SJCXZAxjERym5ZCqGTsATWQ91QZDZD"
 
 # build the query string for the GET method
 qs <- list(metadata=1, access_token=token)
@@ -463,7 +463,7 @@ top_likes <- all_likes[, list(n_like=.N), by="name"] %>% setorder(-n_like)
 like_trending1 %>% 
     ggplot(aes(x=timed, y=n_like)) + geom_line() + geom_point()
 
-like_trending2[name %in% top_likes$name[1:10]] %>%
+like_trending2[name %in% top_likes$name[1:5]] %>%
     ggplot(aes(x=timed, y=n_like, color=name)) + geom_line() + geom_point() +
     theme(text=element_text(family='Heiti TC Light')) # required to show chinese on OSX
 ```
@@ -485,7 +485,8 @@ like_trending2[name %in% top_likes$name[1:10]] %>%
 3. OBSERVE the `posts` edge of your friends
     + `<uid>/posts`
     + obviously, not all posts are available *even if it is shared within friends*
-    + possibly due to some un-documented API features
+    + this is due to the token permission checked
+        + BOTH your tokens must grant related permission
 
 4. whatever, let's crawl your friend list
 
@@ -665,7 +666,7 @@ library("stringr")
 
 ### > Exercise: PTT Gossiping Pattern Match
 
-```{r ptt gossip}
+```{r ptt gossip, warning=FALSE}
 if ( ! "rvest" %in% rownames(installed.packages()) )
     install.packages("rvest")
 library("rvest")
@@ -689,6 +690,7 @@ grep("[公告]", gossip_titles, value=TRUE)
 # now make a comprehensive function for multi-page crawling
 crawlGossip <- function(npage, pat) {
     
+    require(data.table)
     require(parallel)
     require(rvest)
     require(httr)
@@ -710,40 +712,53 @@ crawlGossip <- function(npage, pat) {
                          (lastpage_idx+1):(lastpage_idx-npage+2))
     
     # grep titles with given regex
-    oneshot <- function(page_url, ...) {
+    oneshot <- function(page_url, pat) {
+        require(data.table)
         require(rvest)
         require(httr)
         gossip <- GET(page_url,
-                  set_cookies(over18=1))$content %>% 
-            read_html %>% 
+                  set_cookies(over18=1))$content %>% read_html
+        titles <- gossip %>%
             html_nodes("div .title") %>% 
             html_text() %>%
-            gsub("\n\t*", '', .) %>%
-            grep(pat, ., value=TRUE) 
+            gsub("\n\t*", '', .)
+        nrec <- gossip %>%
+            html_nodes("div .nrec") %>%
+            html_text()
+        res <- data.table(nrec=nrec, title=titles) %>%
+            .[grepl(pat, title)]
     }
-    res <- parLapplyLB(cl, all_pages, oneshot)
-    res[sapply(res, function(x) length(x) > 0)] %>% 
-        unlist
+    res <- parLapplyLB(cl, all_pages, oneshot, pat=pat)
+    res[sapply(res, function(x) length(x) > 0)] %>% rbindlist
 }
 
-wanted <- crawlGossip(100, "^\\[問卦\\] 有沒有.*的八卦？")
-wanted
+# check result
+system.time(
+    wanted <- crawlGossip(1000, "^\\[問卦\\] 有沒有.*的八卦？")
+)
+wanted %>% head
+
+# tidy result
+wanted <- wanted[grep("爆", nrec), cnt := 150L] %>%
+    .[grep("^X", nrec), cnt := 0L] %>%
+    .[nrec == '', cnt := 0L] %>%
+    .[is.na(cnt), cnt:=as.integer(nrec)]
 ```
 
 ```{r wordcloud, message=FALSE}
 # not enough? let's do some visualization
 library(RColorBrewer)
 library(wordcloud)
-buzz <- str_match(wanted, "有沒有(.*)的八卦？")[,2] %T>% 
+buzz <- str_match(wanted$title, "有沒有(.*)的八卦？")[,2] %T>% 
     {
         par(family='Heiti TC Light')
-        wordcloud(., min.freq=1, rot.per=.5, scale=c(1,2), 
-                  random.color=TRUE, colors=palette()) 
+        wordcloud(., wanted$cnt, min.freq=3, scale=c(4,.5), 
+                  rot.per=0, fixed.asp=FALSE,
+                  colors=brewer.pal(8, name="Set2"), random.color=TRUE)
     }
 ```
 
 ## Appendix
-
 
 ## References
 + Facebook Graph API [official doc](https://developers.facebook.com/docs/graph-api)
