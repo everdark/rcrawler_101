@@ -170,7 +170,7 @@ library("httr")
 api_addr <- "https://graph.facebook.com/v2.4/me"
 
 # a valid token
-token <- "CAACEdEose0cBAFyHVA9ZCAW3doie9gJvrX650QZAllaZBt3BwowO5fTSAIPraNLjEaqa7jiUm1BWBvjcSfGBfUFzeUZC393GMR0GKDRZAoJvl0nVeXH6EaMZBL22ZBeBAFZAWmSZBrBdfpq1m2zekLKyZB3XG4J4tMNbZCqLZAoBfazk2Ma2KQsZAC6SJCXZAxjERym5ZCqGTsATWQ91QZDZD"
+token <- "CAACEdEose0cBANP9cpWekr6LdPyHLwPdzHZCfcYAfGX0FCGN8W2AIaWJPxbH5BGOmgycPRPcvgg8gtaEbySG3NwOBADud9kVSZCdw7Px7b84gO7SZCqfMusf3Y6vtuy6hySl2BNPD0tfi6mtu6MpvJvZCfz6Wyc51jfK8X9mNMW661mhYWLlAV6E6wvzdd6hfHOSZCGU3fAZDZD"
 
 # build the query string for the GET method
 qs <- list(metadata=1, access_token=token)
@@ -609,7 +609,7 @@ deletePost(test_pid, token=token)
 # lapply(all_my_posts$pid, postLike, token=token)
 ```
 
-## Regular Expression
+## Regular Expression Basics
 
 ### > what is it?
 > ...a sequence of characters that define a search pattern, mainly for use in pattern matching with strings, or string matching, i.e. "find and replace"-like operations.
@@ -630,11 +630,167 @@ deletePost(test_pid, token=token)
 
 ### > a quick journey
 
-https://regex101.com/#python
+```{r re quick intro}
+if ( ! "rvest" %in% rownames(installed.packages()) )
+    install.packages("rvest")
+library("rvest")
+
+# crawl PTT Gossiping article titles
+gossip <- GET("https://www.ptt.cc/bbs/Gossiping/index.html",
+              set_cookies(over18=1))$content %>% read_html
+(gossip_titles <- gossip %>% 
+    html_nodes("div .title") %>% 
+    html_text())
+```
+
+#### >> pattern replacing
++ remove unwanted characters
+```{r re quick intro: replace}
+(gossip_titles_cleansed <- gsub("\n\t*", '', gossip_titles))
+```
+
+#### >> pattern filtering
++ search for titles with "[問卦]" only
+```{r re quick intro: filter 1}
+# something wrong?
+grep("[問卦]", gossip_titles_cleansed, value=TRUE) 
+
+# how about...
+grep("\\[問卦\\]", gossip_titles_cleansed, value=TRUE)
+```
+
++ don't want reply article!
+```{r re quick intro: filter 2}
+grep("^\\[問卦\\]", gossip_titles_cleansed, value=TRUE)
+```
+
++ only reply article
+```{r re quick intro: filter 3}
+grep("^Re: ", gossip_titles_cleansed, value=TRUE)
+```
+
++ titles with ending question mark
+```{r re quick intro: filter 4}
+grep("？$", gossip_titles_cleansed, value=TRUE)
+```
+
++ titles with any English alphabet
+```{r re quick intro: filter 5}
+grep("[a-zA-Z]", gossip_titles_cleansed, value=TRUE)
+```
 
 ### > basic components of RE
++ characters (string-literals)
+    + `ABCabc123`
++ meta-characters (operators)
+    + `. ^ $ * + ? { } [ ] \ | ( )`
++ special sequences (short-cuts)
+    + `\d \D \s \S \w \W \b \B`
 
-## Regular Expression in R
+#### >> wildcarder: `.`
++ match anything 
+    + *except* newline(`\n`) for *Perl* RE
+    + yes there are different versions of RE
+    + but the foundementals are essentially the same
+    
+```{r re basics: .}
+test_str <- c("hello world", "你好啊", "\n") 
+grep('.', test_str, value=TRUE, perl=TRUE)
+grep('.', test_str, value=TRUE, perl=FALSE)
+```
+
+#### >> bounders: `^` and `$`
++ `^` limits the begining character
++ `$` limits the ending character
+
+```{r re basics: ^$}
+grep('^hello', test_str, value=TRUE)
+grep('world$', test_str, value=TRUE)
+grep('^[h你]', test_str, value=TRUE)
+```
+
+#### >> repeaters: `*`, `+`, and `?`
++ `*`: the previous unit must repeat **0 or many times**
++ `+`: the previous unit must repeat **1 or many times**
++ `?`: the previous unit must repeat **0 or 1 times**
+
+```{r re basics: *+?}
+grep("l*", test_str, value=TRUE)
+grep("l+", test_str, value=TRUE)
+grep("l?", test_str, value=TRUE)
+```
+
+#### >> advanced repeaters: `{m,n}`
++ the previous unit must repeat **at least m times and at most n times**
+
+```{r re basics: {m,n}}
+grep("l{0,10}", test_str, value=TRUE)
+grep("l{2}", test_str, value=TRUE)
+grep("l{,2}", test_str, value=TRUE)
+grep("l{2,}", test_str, value=TRUE)
+```
+
+#### >> class: `[]`
++ a set of characters that *may* occcur
++ meta-char will lose their speacial meaning within it
+    + `[0-9$]` matches any of numbers 0 to 9 or the dollar sign($)
+    + here the bounder meta-char `$` is treated "as-is""
+    + special meaning only triggered within the class:
++ class-specific metas:
+    + `-`: ranger
+        + e.g., `[0-9a-zA-Z]`
+    + `^`: negator 
+        + e.g., `[^0-9]`
+
+```{r re basics: []}
+grep("[a-z]", test_str, value=TRUE)
+grep("[0-9]", test_str, value=TRUE)
+
+# want to match the dash (-) ?
+grep("[a-z-]", c("abc", "123-456"), value=TRUE)
+```
+
+#### >> grouper: `()`
++ to group multiple characters as one unit such that...
+    + all other metas will operate on the entire grouped char
+    + useful for pattern **match and extraction**
+
+```{r re basics: ()}
+test_str2 <- c("hello", "olleh", "hellohello")
+test_str2 %>% grep("^hello$", ., value=TRUE)
+test_str2 %>% grep("^[hello]$", ., value=TRUE)
+test_str2 %>% grep("^(hello)?$", ., value=TRUE)
+test_str2 %>% grep("^(hello)+$", ., value=TRUE)
+```
+
+#### >> or: `|`
++ to qualify one of multiple regex
+
+```{r re basics: |}
+grep("^h|^你", test_str, value=TRUE)
+```
+
+#### >> escaper: `\`
++ to make its following unit **as-is**
+    + the special meaning, if any, is said to be escaped
+    + escaper must be *doubled* in R
+        + due to language implementation
+        
+```{r re basics: `\`}
+grep("^\\^", "^123", value=TRUE)
+```
+
+#### >> other special sequences
++ short-cut of specific character classes
++ `\d`: any decimal digit => `[0-9]`
++ `\D`: any non-digit => `[^0-9]`
++ `\s`: any white space => `[ \t\n\r\f\v]`
++ `\S`: any non-white space => `[^ \t\n\r\f\v]`
++ `\w`: any alphanumeric => `[a-zA-Z0-9_]`
++ `\W`: any non-alphanumeric => `[^a-zA-Z0-9_]`
++ `\b`: matches the empty string, but only at the beginning or end of a word (`\w`)
+
+## Regular Expression facilities in R
 
 ### > `base::grep` and `base::grepl`
 
@@ -667,27 +823,7 @@ library("stringr")
 ### > Exercise: PTT Gossiping Pattern Match
 
 ```{r ptt gossip, warning=FALSE}
-if ( ! "rvest" %in% rownames(installed.packages()) )
-    install.packages("rvest")
-library("rvest")
-
-# firstly, crawl the fron page
-gossip <- GET("https://www.ptt.cc/bbs/Gossiping/index.html",
-              set_cookies(over18=1))$content %>% read_html
-
-# then locate the paging index
-lastpage_idx <- gossip %>% html_nodes("div .btn.wide") %>%
-    grep("上頁", ., value=TRUE) %>% {
-        str_match(., "index([0-9]+)\\.html")[,2]
-    }
-
-# try some
-(gossip_titles <- gossip %>% 
-    html_nodes("div .title") %>% 
-    html_text())
-grep("[公告]", gossip_titles, value=TRUE)
-
-# now make a comprehensive function for multi-page crawling
+# make a comprehensive function for multi-page crawling
 crawlGossip <- function(npage, pat) {
     
     require(data.table)
