@@ -954,12 +954,11 @@ buzz <- str_match(wanted$title, "有沒有(.*)的八卦？")[,2] %T>%
     }
 ```
 
-## Appendix
-
 ## References
 + Facebook Graph API [official doc](https://developers.facebook.com/docs/graph-api)
 + [stringr vignettes](https://cran.r-project.org/web/packages/stringr/vignettes/stringr.html)
 + [httr quickstart guide](https://cran.r-project.org/web/packages/httr/vignettes/quickstart.html)
++ [magrittr vignettes](https://cran.r-project.org/web/packages/magrittr/vignettes/magrittr.html)
 
 ## Other Useful Materials
 + learning R: a programmer-oriented introduction
