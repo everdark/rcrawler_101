@@ -886,10 +886,11 @@ gossip_titles_cleansed %>% head %>% str_match_all("[a-z]")
 
 ```{r ptt gossip, warning=FALSE}
 # make a comprehensive function for multi-page crawling
-crawlGossip <- function(npage, pat) {
+crawlPttTitles <- function(npage, pat, target="Gossiping") {
     
     require(data.table)
     require(parallel)
+    require(stringr)
     require(rvest)
     require(httr)
     
@@ -898,29 +899,32 @@ crawlGossip <- function(npage, pat) {
     on.exit(stopCluster(cl))
     
     # crawl front page
-    gossip <- GET("https://www.ptt.cc/bbs/Gossiping/index.html",
-              set_cookies(over18=1))$content %>% read_html
+    response <- GET(sprintf("https://www.ptt.cc/bbs/%s/index.html", target), 
+                  set_cookies(over18=1))
+    if ( (rcode <- response$status_code) != 200 )
+        stop(sprintf("Got status code %s.", rcode))
     
     # get page index
-    lastpage_idx <- gossip %>% html_nodes("div .btn.wide") %>%
+    lastpage_idx <- response$content %>% read_html %>% 
+        html_nodes("div .btn.wide") %>%
         grep("上頁", ., value=TRUE) %>% {
             as.integer(str_match(., "index([0-9]+)\\.html")[,2])
         }
-    all_pages <- sprintf("https://www.ptt.cc/bbs/Gossiping/index%s.html",
-                         (lastpage_idx+1):(lastpage_idx-npage+2))
+    all_pages <- sprintf("https://www.ptt.cc/bbs/%s/index%s.html",
+                         target, (lastpage_idx+1):(lastpage_idx-npage+2))
     
     # grep titles with given regex
     oneshot <- function(page_url, pat) {
         require(data.table)
         require(rvest)
         require(httr)
-        gossip <- GET(page_url,
+        ptt <- GET(page_url,
                   set_cookies(over18=1))$content %>% read_html
-        titles <- gossip %>%
+        titles <- ptt %>%
             html_nodes("div .title") %>% 
             html_text() %>%
             gsub("\n\t*", '', .)
-        nrec <- gossip %>%
+        nrec <- ptt %>%
             html_nodes("div .nrec") %>%
             html_text()
         res <- data.table(nrec=nrec, title=titles) %>%
@@ -932,7 +936,7 @@ crawlGossip <- function(npage, pat) {
 
 # check result
 system.time(
-    wanted <- crawlGossip(1000, "^\\[問卦\\] 有沒有.*的八卦？")
+    wanted <- crawlPttTitles(1000, "^\\[問卦\\] 有沒有.*的八卦？")
 )
 wanted %>% head
 
@@ -954,6 +958,21 @@ buzz <- str_match(wanted$title, "有沒有(.*)的八卦？")[,2] %T>%
                   rot.per=0, fixed.asp=FALSE,
                   colors=brewer.pal(8, name="Set2"), random.color=TRUE)
     }
+```
+
+### > Exercise: PTT Moive Tagging
+
+```{r ptt movie}
+ptt_movie <- crawlPttTitles(1000, "^\\[.*雷\\]", "movie")
+    
+rei <- str_match(ptt_movie$title, "^\\[(.*)雷\\]《(.*)》") %>%
+    .[!is.na(.[,1]),-1] %>%
+    as.data.table %>% {
+        setnames(., c("rei", "title"))
+        setorder(., title)
+        .[, list(.N), by="title,rei"]
+    }
+head(rei, 20) %>% write.table(row.names=FALSE, col.names=FALSE, quote=FALSE)
 ```
 
 ## References
