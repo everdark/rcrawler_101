@@ -111,7 +111,7 @@ multiple modifiers can be chained together
 + on edge:
     + `<photo_id>/likes?limit=1&summary=true`
 
-### > Exercise: Who likes me?
+### > Exercise: Who Likes Me?
 
 1. start from `me`
 2. is `posts` an edge or a field of `me`?
@@ -153,7 +153,7 @@ curl -i -X GET \
  "https://graph.facebook.com/v2.4/me?fields=context&access_token=CAACEdEose0cBAL34H6NiMZB3ZCnPaZBnShQoSY9GZCh81kDLbQZArxKGEPY981H7KfBUjG99jThga2OxQ7owu03IZCgoEcjMDmVSyeZAzos3JZBvWEzbRbfX0DZAl0Au2ybbbZCNZBOsZCYGmjKqCLyTHftwrnOerU07Pismb3QBxYommKEo7oGsWTIIREpbKu4VlHMJY7Q7ZBY00aAZDZD"
 ```
 
-### > Exercise: Get all metadata fields of the `me` node
+### > Exercise: Get all Metadata Fields of the `me` Node
 1. use a library that handles HTTP requests
 
 ```{r load httr}
@@ -209,7 +209,7 @@ parsed_contents$metadata$connections %>%
     writeLines
 ```
 
-### > Exercise: Get all paginated data
+### > Exercise: Get all Paginated Data
 > Scenario: find a post, get a list of names from all users liked it
 
 1. **OBSERVE! OBSERVE! OBSERVE!**
@@ -298,7 +298,7 @@ all.equal(result1, result2) # should return T
 head(do.call(rbind, result1))
 ```
 
-### > Exercise: Plot trending of likes on `me/posts`
+### > Exercise: The Trending of Likes
 
 1. what do we need?
     + a starting time
@@ -470,7 +470,7 @@ like_trending2[name %in% top_likes$name[1:5]] %>%
     theme(text=element_text(family='Heiti TC Light')) # required to show chinese on OSX
 ```
 
-### > Exercise: The warrior of likes
+### > Exercise: The Warrior of Likes
 
 1. OBSERVE your friends
     + `me/friends`
@@ -793,7 +793,7 @@ grep("^\\^", "^123", value=TRUE)
 + `\W`: any non-alphanumeric => `[^a-zA-Z0-9_]`
 + `\b`: matches the empty string, but only at the beginning or end of a word (`\w`)
 
-## Regular Expression facilities in R
+## Regular Expression Facilities in R
 
 ### > `base::grep` and `base::grepl`
 + `grep`: match and return
