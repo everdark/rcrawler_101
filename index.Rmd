@@ -977,8 +977,8 @@ head(rei, 20) %>% write.table(row.names=FALSE, col.names=FALSE, quote=FALSE)
 
 ### > Exercise: Dcard Article Crawling
 
-```{r dcard}
-
++ Title only
+```{r dcard title}
 crawlDcardTitles <- function(target="bg", npage, pat) {
     
     require(data.table)
@@ -1014,6 +1014,67 @@ system.time(
 
 dcardtitles # rarer than what I thought...
 ```
+
++ Dig into contents of articles
+```{r dcard content}
+crawlDcardArticles <- function(target="bg", npage, title_pat=NULL, article_pat) {
+    
+    require(parallel)
+    require(stringr)
+    require(rvest)
+    require(httr)
+    
+    cl <- makeCluster(detectCores())
+    on.exit(stopCluster(cl))
+    
+    pages <- sprintf("https://www.dcard.tw/api/forum/%s/%s", target, 1:npage)
+    
+    crawlSinglePageTitleId <- function(page_url, pat) {
+        require(rvest)
+        require(httr)
+        response <- GET(page_url)
+        if ( (rcode <- response$status_code) != 200 ) {
+            NULL
+        } else {
+            json <- content(response)
+            if ( !is.null(pat) ) {
+                idx <- sapply(json, function(x) x$version[[1]]$title) %>%
+                    grep(pat, .)
+                sapply(json[idx], function(x) x$id)
+            } else {
+                content(response) %>% sapply(function(x) x$id)    
+            }
+        }
+    }
+    
+    crawlSingleArticle <- function(page_url, pat) {
+        require(rvest)
+        require(httr)
+        response <- GET(page_url)
+        if ( (rcode <- response$status_code) != 200 ) {
+            NULL
+        } else {
+            content(response)$version[[1]]$content %>%
+                grep(pat, ., value=TRUE)
+        }
+    }
+    
+    parLapplyLB(cl, pages, crawlSinglePageTitleId, pat=title_pat) %>% 
+        unlist %>% 
+        sprintf("https://www.dcard.tw/api/post/%s/%s", target, .) %>%
+        parLapplyLB(cl, ., crawlSingleArticle, pat=article_pat) %>% 
+        unlist
+}
+
+system.time(
+    dcardarticles <- crawlDcardArticles("bg", 10, article_pat="室友")    
+)
+
+length(dcardarticles)
+
+dcardarticles %>% head %>% substr(start=1, stop=100)
+```
+
 
 ## References
 + Facebook Graph API [official doc](https://developers.facebook.com/docs/graph-api)
