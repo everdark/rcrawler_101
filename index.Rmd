@@ -975,6 +975,46 @@ rei <- str_match(ptt_movie$title, "^\\[(.*)雷\\]《(.*)》") %>%
 head(rei, 20) %>% write.table(row.names=FALSE, col.names=FALSE, quote=FALSE)
 ```
 
+### > Exercise: Dcard Article Crawling
+
+```{r dcard}
+
+crawlDcardTitles <- function(target="bg", npage, pat) {
+    
+    require(data.table)
+    require(parallel)
+    require(stringr)
+    require(rvest)
+    require(httr)
+    
+    cl <- makeCluster(detectCores())
+    on.exit(stopCluster(cl))
+    
+    pages <- sprintf("https://www.dcard.tw/api/forum/%s/%s", target, 1:npage)
+    
+    crawlSinglePage <- function(page_url, pat) {
+        require(data.table)
+        require(rvest)
+        require(httr)
+        response <- GET(page_url)
+        if ( (rcode <- response$status_code) != 200 ) {
+            NULL
+        } else {
+            content(response) %>%
+                sapply(function(x) x$version[[1]]$title) %>%
+                grep(pat, ., value=TRUE)
+        }
+    }
+    parLapplyLB(cl, pages, crawlSinglePage, pat=pat) %>% unlist
+}
+
+system.time(
+    dcardtitles <- crawlDcardTitles("bg", 1000, "室友")
+)
+
+dcardtitles # rarer than what I thought...
+```
+
 ## References
 + Facebook Graph API [official doc](https://developers.facebook.com/docs/graph-api)
 + [stringr vignettes](https://cran.r-project.org/web/packages/stringr/vignettes/stringr.html)

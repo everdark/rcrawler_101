@@ -66,7 +66,7 @@ img {
 <address class="author_afil">
 Data Scientist, Trend Micro<br><a class="author_email" href="mailto:#"><a href="mailto:kylechun9@gmail.com">kylechun9@gmail.com</a></a>
 </address>
-<h4 class="date"><em>15 December, 2015</em></h4>
+<h4 class="date"><em>17 December, 2015</em></h4>
 </div>
 
 <div id="TOC">
@@ -102,6 +102,7 @@ Data Scientist, Trend Micro<br><a class="author_email" href="mailto:#"><a href="
 <li><a href="#the-stringr-library">&gt; the <code>stringr</code> library</a></li>
 <li><a href="#exercise-ptt-gossiping-pattern-match">&gt; Exercise: PTT Gossiping Pattern Match</a></li>
 <li><a href="#exercise-ptt-moive-tagging">&gt; Exercise: PTT Moive Tagging</a></li>
+<li><a href="#exercise-dcard-article-crawling">&gt; Exercise: Dcard Article Crawling</a></li>
 </ul></li>
 <li><a href="#references">References</a></li>
 <li><a href="#other-useful-materials">Other Useful Materials</a></li>
@@ -1643,6 +1644,45 @@ head(rei, 20) %&gt;% write.table(row.names=FALSE, col.names=FALSE, quote=FALSE)<
 ## 全家玩到趴 好 1
 ## 冒牌情緣 好 1
 ## 冰毒 好 1</code></pre>
+</div>
+<div id="exercise-dcard-article-crawling" class="section level3">
+<h3>&gt; Exercise: Dcard Article Crawling</h3>
+<pre class="r"><code>crawlDcardTitles &lt;- function(target=&quot;bg&quot;, npage, pat) {
+    
+    require(data.table)
+    require(parallel)
+    require(stringr)
+    require(rvest)
+    require(httr)
+    
+    cl &lt;- makeCluster(detectCores())
+    on.exit(stopCluster(cl))
+    
+    pages &lt;- sprintf(&quot;https://www.dcard.tw/api/forum/%s/%s&quot;, target, 1:npage)
+    
+    crawlSinglePage &lt;- function(page_url, pat) {
+        require(data.table)
+        require(rvest)
+        require(httr)
+        response &lt;- GET(page_url)
+        if ( (rcode &lt;- response$status_code) != 200 ) {
+            NULL
+        } else {
+            content(response) %&gt;%
+                sapply(function(x) x$version[[1]]$title) %&gt;%
+                grep(pat, ., value=TRUE)
+        }
+    }
+    parLapplyLB(cl, pages, crawlSinglePage, pat=pat) %&gt;% unlist
+}
+
+system.time(
+    dcardtitles &lt;- crawlDcardTitles(&quot;bg&quot;, 1000, &quot;室友&quot;)
+)</code></pre>
+<pre><code>##    user  system elapsed 
+##   0.023   0.014 105.977</code></pre>
+<pre class="r"><code>dcardtitles # rarer than what I thought...</code></pre>
+<pre><code>## [1] &quot;室友抱了我男友&quot; &quot;室友被封鎖了&quot;   &quot;被室友嘴了..&quot;</code></pre>
 </div>
 </div>
 <div id="references" class="section level2">
