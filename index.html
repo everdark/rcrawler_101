@@ -1689,10 +1689,10 @@ system.time(
 <ul>
 <li>Dig into contents of articles</li>
 </ul>
-<pre class="r"><code>crawlDcardArticles &lt;- function(target=&quot;bg&quot;, npage, title_pat=NULL, article_pat) {
+<pre class="r"><code>crawlDcardArticles &lt;- function(target=&quot;bg&quot;, npage, 
+                               title_pat=NULL, article_pat, npat) {
     
     require(parallel)
-    require(stringr)
     require(rvest)
     require(httr)
     
@@ -1719,39 +1719,49 @@ system.time(
         }
     }
     
-    crawlSingleArticle &lt;- function(page_url, pat) {
+    crawlSingleArticle &lt;- function(page_url, pat, npat) {
+        require(stringr)
         require(rvest)
         require(httr)
         response &lt;- GET(page_url)
         if ( (rcode &lt;- response$status_code) != 200 ) {
             NULL
         } else {
-            content(response)$version[[1]]$content %&gt;%
-                grep(pat, ., value=TRUE)
+            json &lt;- content(response)
+            matched_len &lt;- json$version[[1]]$content %&gt;%
+                str_match_all(pat) %&gt;% 
+                unlist %&gt;% 
+                length
+            if  ( matched_len &gt;= npat ) {
+                json$version[[1]]$content
+            } else {
+                NULL
+            }
         }
     }
     
     parLapplyLB(cl, pages, crawlSinglePageTitleId, pat=title_pat) %&gt;% 
         unlist %&gt;% 
         sprintf(&quot;https://www.dcard.tw/api/post/%s/%s&quot;, target, .) %&gt;%
-        parLapplyLB(cl, ., crawlSingleArticle, pat=article_pat) %&gt;% 
+        parLapplyLB(cl, ., crawlSingleArticle, 
+                    pat=article_pat, npat=npat) %&gt;% 
         unlist
 }
 
 system.time(
-    dcardarticles &lt;- crawlDcardArticles(&quot;bg&quot;, 10, article_pat=&quot;室友&quot;)    
+    dcardarticles &lt;- crawlDcardArticles(&quot;bg&quot;, 100, article_pat=&quot;室友&quot;, npat=3)    
 )</code></pre>
 <pre><code>##    user  system elapsed 
-##   0.022   0.014  20.164</code></pre>
+##   0.031   0.014 187.453</code></pre>
 <pre class="r"><code>length(dcardarticles)</code></pre>
-<pre><code>## [1] 7</code></pre>
+<pre><code>## [1] 9</code></pre>
 <pre class="r"><code>dcardarticles %&gt;% head %&gt;% substr(start=1, stop=100)</code></pre>
-<pre><code>## [1] &quot;看完\n\&quot;當我把你壓在床上的那一刻\&quot;\n有感而發 想要來分享自己的故事。\n————————————————\n當我大一剛入學的時候\n他是系上活躍的學長\n甚至是系上好男人的典範\n因為他總是將他的遠距離女朋友\n&quot;                 
-## [2] &quot;聖誕節要到了，許多系都會合辦聖誕晚會。\n\n我男友是理工科系，他們和人院某女生不少的系一起合辦、表演，不巧的我男友就是負責演戲、排舞的工作人員。\n\n\n某次我陪男友去練習，我傻傻站在旁邊看，看著看著，我無&quot;
-## [3] &quot;我是大一生。\n這學期也差不多快過完了\n有個問題一直困擾我很久 那就是朋友的關係。\n\n到了這個時間，大家都漸漸有了自己班上的團體圈。那我本身也有一個在班上常互動的朋友圈。3人中其中一個剛好是我的室友。\n&quot;  
-## [4] &quot;不知道大家有沒有玩Goodnight這個軟體\n對於懶得打字的我 睡前聊聊天舒發一下(因為沒室友自己住)\n\n最近因為在忙一個大報告所以都很晚睡\n3點多準備入睡時卻異常的精神好\n所以打開了很久沒用的Goo&quot;                
-## [5] &quot;前幾個星期，我室友突然說她想去拜月老\n我聽了下了一跳\n\n她..\n是那種完全不會和班上男生接觸的\n連說話都不太會的...\n\n而且她是非常易怒的那種..\n小事也可以臉臭到爆..都不和全部人說話\n\n她講話超&quot;         
-## [6] &quot;我都會跟朋友提到她\n但她只有跟一個好朋友說過\n\n另外知道我的就是她前男友跟一個室友\n她對我很好\n有空就會從台北跑來桃園找我\n有空就跟我電話或視訊\n\n我沒有要放閃\n只是她男生朋友多\n我想讓他們知道我存在&quot;</code></pre>
+<pre><code>## [1] &quot;聖誕節要到了，許多系都會合辦聖誕晚會。\n\n我男友是理工科系，他們和人院某女生不少的系一起合辦、表演，不巧的我男友就是負責演戲、排舞的工作人員。\n\n\n某次我陪男友去練習，我傻傻站在旁邊看，看著看著，我無&quot;
+## [2] &quot;我是大一生。\n這學期也差不多快過完了\n有個問題一直困擾我很久 那就是朋友的關係。\n\n到了這個時間，大家都漸漸有了自己班上的團體圈。那我本身也有一個在班上常互動的朋友圈。3人中其中一個剛好是我的室友。\n&quot;  
+## [3] &quot;男友租房在外面，同屋簷下還有兩位室友，是一對\&quot;正咩\&quot;姊妹花\n男友和姊妹花的姊姊是同班同學\n而姐妹花都已經有男朋友\n住的地方有兩間廁所，姐妹花共用一間，男友自己一間\n\n昨天我到男友家讀書\n月經剛好來，而&quot;
+## [4] &quot;前幾天的天氣真的滿好的 \n都已經12月中了  居然還跟春天一樣\n本想說是不是溫室效應變嚴重了\n直到今天開始變冷 這時一件神奇的事發生了\n今天我那位超暖的暖男室友外加天平屬性 我曾經也差點被她暖歪\n他今&quot;       
+## [5] &quot;昨晚\n由於本魯是一個沒什麼在觀天象的人\n因此也不知道昨天似乎是有流星雨可以觀賞許願\n不過似乎有聽到大家在討論\n\n故事發生了\n本魯與學妹是鄰居\n因此晚間10點多吃飽飯決定要把之前借的筆記還她\n跟學妹約在&quot;  
+## [6] &quot;我常被一個住學校宿舍的同學收留在房間，所以基本上都很熟。那寢的女生，一個森保，一個跟我一樣，其他都是史學。\n    然後星期三我們系剛好要跟史學系聯誼，朋友跟我說我們系女生很少，總之大家問我要不要去.&quot;</code></pre>
 </div>
 </div>
 <div id="references" class="section level2">
@@ -1779,7 +1789,7 @@ system.time(
 <ul>
 <li><a href="http://everdark.github.io/ggplot2_lecture_dsc2015/">everdark/ggplot2_lecture_dsc2015</a></li>
 </ul></li>
-<li>same materials but in Python
+<li>similar materials but in Python
 <ul>
 <li><a href="http://everdark.github.io/pycrawler_101/#/">everdark/pycrawler_101</a></li>
 </ul></li>
