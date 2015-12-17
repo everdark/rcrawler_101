@@ -1017,10 +1017,10 @@ dcardtitles # rarer than what I thought...
 
 + Dig into contents of articles
 ```{r dcard content}
-crawlDcardArticles <- function(target="bg", npage, title_pat=NULL, article_pat) {
+crawlDcardArticles <- function(target="bg", npage, 
+                               title_pat=NULL, article_pat, npat) {
     
     require(parallel)
-    require(stringr)
     require(rvest)
     require(httr)
     
@@ -1047,27 +1047,37 @@ crawlDcardArticles <- function(target="bg", npage, title_pat=NULL, article_pat) 
         }
     }
     
-    crawlSingleArticle <- function(page_url, pat) {
+    crawlSingleArticle <- function(page_url, pat, npat) {
+        require(stringr)
         require(rvest)
         require(httr)
         response <- GET(page_url)
         if ( (rcode <- response$status_code) != 200 ) {
             NULL
         } else {
-            content(response)$version[[1]]$content %>%
-                grep(pat, ., value=TRUE)
+            json <- content(response)
+            matched_len <- json$version[[1]]$content %>%
+                str_match_all(pat) %>% 
+                unlist %>% 
+                length
+            if  ( matched_len >= npat ) {
+                json$version[[1]]$content
+            } else {
+                NULL
+            }
         }
     }
     
     parLapplyLB(cl, pages, crawlSinglePageTitleId, pat=title_pat) %>% 
         unlist %>% 
         sprintf("https://www.dcard.tw/api/post/%s/%s", target, .) %>%
-        parLapplyLB(cl, ., crawlSingleArticle, pat=article_pat) %>% 
+        parLapplyLB(cl, ., crawlSingleArticle, 
+                    pat=article_pat, npat=npat) %>% 
         unlist
 }
 
 system.time(
-    dcardarticles <- crawlDcardArticles("bg", 10, article_pat="室友")    
+    dcardarticles <- crawlDcardArticles("bg", 100, article_pat="室友", npat=3)    
 )
 
 length(dcardarticles)
@@ -1090,5 +1100,5 @@ dcardarticles %>% head %>% substr(start=1, stop=100)
     + [the data.table cheatsheet](http://www.r-bloggers.com/the-data-table-cheat-sheet/)
 + learning `ggplot2`
     + [everdark/ggplot2_lecture_dsc2015](http://everdark.github.io/ggplot2_lecture_dsc2015/)
-+ same materials but in Python
++ similar materials but in Python
     + [everdark/pycrawler_101](http://everdark.github.io/pycrawler_101/#/)
