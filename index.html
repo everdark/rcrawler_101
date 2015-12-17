@@ -66,7 +66,7 @@ img {
 <address class="author_afil">
 Data Scientist, Trend Micro<br><a class="author_email" href="mailto:#"><a href="mailto:kylechun9@gmail.com">kylechun9@gmail.com</a></a>
 </address>
-<h4 class="date"><em>15 December, 2015</em></h4>
+<h4 class="date"><em>17 December, 2015</em></h4>
 </div>
 
 <div id="TOC">
@@ -102,6 +102,7 @@ Data Scientist, Trend Micro<br><a class="author_email" href="mailto:#"><a href="
 <li><a href="#the-stringr-library">&gt; the <code>stringr</code> library</a></li>
 <li><a href="#exercise-ptt-gossiping-pattern-match">&gt; Exercise: PTT Gossiping Pattern Match</a></li>
 <li><a href="#exercise-ptt-moive-tagging">&gt; Exercise: PTT Moive Tagging</a></li>
+<li><a href="#exercise-dcard-article-crawling">&gt; Exercise: Dcard Article Crawling</a></li>
 </ul></li>
 <li><a href="#references">References</a></li>
 <li><a href="#other-useful-materials">Other Useful Materials</a></li>
@@ -1643,6 +1644,114 @@ head(rei, 20) %&gt;% write.table(row.names=FALSE, col.names=FALSE, quote=FALSE)<
 ## 全家玩到趴 好 1
 ## 冒牌情緣 好 1
 ## 冰毒 好 1</code></pre>
+</div>
+<div id="exercise-dcard-article-crawling" class="section level3">
+<h3>&gt; Exercise: Dcard Article Crawling</h3>
+<ul>
+<li>Title only</li>
+</ul>
+<pre class="r"><code>crawlDcardTitles &lt;- function(target=&quot;bg&quot;, npage, pat) {
+    
+    require(data.table)
+    require(parallel)
+    require(stringr)
+    require(rvest)
+    require(httr)
+    
+    cl &lt;- makeCluster(detectCores())
+    on.exit(stopCluster(cl))
+    
+    pages &lt;- sprintf(&quot;https://www.dcard.tw/api/forum/%s/%s&quot;, target, 1:npage)
+    
+    crawlSinglePage &lt;- function(page_url, pat) {
+        require(data.table)
+        require(rvest)
+        require(httr)
+        response &lt;- GET(page_url)
+        if ( (rcode &lt;- response$status_code) != 200 ) {
+            NULL
+        } else {
+            content(response) %&gt;%
+                sapply(function(x) x$version[[1]]$title) %&gt;%
+                grep(pat, ., value=TRUE)
+        }
+    }
+    parLapplyLB(cl, pages, crawlSinglePage, pat=pat) %&gt;% unlist
+}
+
+system.time(
+    dcardtitles &lt;- crawlDcardTitles(&quot;bg&quot;, 1000, &quot;室友&quot;)
+)</code></pre>
+<pre><code>##    user  system elapsed 
+##   0.027   0.020 123.946</code></pre>
+<pre class="r"><code>dcardtitles # rarer than what I thought...</code></pre>
+<pre><code>## [1] &quot;室友抱了我男友&quot; &quot;室友被封鎖了&quot;   &quot;被室友嘴了..&quot;</code></pre>
+<ul>
+<li>Dig into contents of articles</li>
+</ul>
+<pre class="r"><code>crawlDcardArticles &lt;- function(target=&quot;bg&quot;, npage, title_pat=NULL, article_pat) {
+    
+    require(parallel)
+    require(stringr)
+    require(rvest)
+    require(httr)
+    
+    cl &lt;- makeCluster(detectCores())
+    on.exit(stopCluster(cl))
+    
+    pages &lt;- sprintf(&quot;https://www.dcard.tw/api/forum/%s/%s&quot;, target, 1:npage)
+    
+    crawlSinglePageTitleId &lt;- function(page_url, pat) {
+        require(rvest)
+        require(httr)
+        response &lt;- GET(page_url)
+        if ( (rcode &lt;- response$status_code) != 200 ) {
+            NULL
+        } else {
+            json &lt;- content(response)
+            if ( !is.null(pat) ) {
+                idx &lt;- sapply(json, function(x) x$version[[1]]$title) %&gt;%
+                    grep(pat, .)
+                sapply(json[idx], function(x) x$id)
+            } else {
+                content(response) %&gt;% sapply(function(x) x$id)    
+            }
+        }
+    }
+    
+    crawlSingleArticle &lt;- function(page_url, pat) {
+        require(rvest)
+        require(httr)
+        response &lt;- GET(page_url)
+        if ( (rcode &lt;- response$status_code) != 200 ) {
+            NULL
+        } else {
+            content(response)$version[[1]]$content %&gt;%
+                grep(pat, ., value=TRUE)
+        }
+    }
+    
+    parLapplyLB(cl, pages, crawlSinglePageTitleId, pat=title_pat) %&gt;% 
+        unlist %&gt;% 
+        sprintf(&quot;https://www.dcard.tw/api/post/%s/%s&quot;, target, .) %&gt;%
+        parLapplyLB(cl, ., crawlSingleArticle, pat=article_pat) %&gt;% 
+        unlist
+}
+
+system.time(
+    dcardarticles &lt;- crawlDcardArticles(&quot;bg&quot;, 10, article_pat=&quot;室友&quot;)    
+)</code></pre>
+<pre><code>##    user  system elapsed 
+##   0.022   0.014  20.164</code></pre>
+<pre class="r"><code>length(dcardarticles)</code></pre>
+<pre><code>## [1] 7</code></pre>
+<pre class="r"><code>dcardarticles %&gt;% head %&gt;% substr(start=1, stop=100)</code></pre>
+<pre><code>## [1] &quot;看完\n\&quot;當我把你壓在床上的那一刻\&quot;\n有感而發 想要來分享自己的故事。\n————————————————\n當我大一剛入學的時候\n他是系上活躍的學長\n甚至是系上好男人的典範\n因為他總是將他的遠距離女朋友\n&quot;                 
+## [2] &quot;聖誕節要到了，許多系都會合辦聖誕晚會。\n\n我男友是理工科系，他們和人院某女生不少的系一起合辦、表演，不巧的我男友就是負責演戲、排舞的工作人員。\n\n\n某次我陪男友去練習，我傻傻站在旁邊看，看著看著，我無&quot;
+## [3] &quot;我是大一生。\n這學期也差不多快過完了\n有個問題一直困擾我很久 那就是朋友的關係。\n\n到了這個時間，大家都漸漸有了自己班上的團體圈。那我本身也有一個在班上常互動的朋友圈。3人中其中一個剛好是我的室友。\n&quot;  
+## [4] &quot;不知道大家有沒有玩Goodnight這個軟體\n對於懶得打字的我 睡前聊聊天舒發一下(因為沒室友自己住)\n\n最近因為在忙一個大報告所以都很晚睡\n3點多準備入睡時卻異常的精神好\n所以打開了很久沒用的Goo&quot;                
+## [5] &quot;前幾個星期，我室友突然說她想去拜月老\n我聽了下了一跳\n\n她..\n是那種完全不會和班上男生接觸的\n連說話都不太會的...\n\n而且她是非常易怒的那種..\n小事也可以臉臭到爆..都不和全部人說話\n\n她講話超&quot;         
+## [6] &quot;我都會跟朋友提到她\n但她只有跟一個好朋友說過\n\n另外知道我的就是她前男友跟一個室友\n她對我很好\n有空就會從台北跑來桃園找我\n有空就跟我電話或視訊\n\n我沒有要放閃\n只是她男生朋友多\n我想讓他們知道我存在&quot;</code></pre>
 </div>
 </div>
 <div id="references" class="section level2">
