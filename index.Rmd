@@ -642,7 +642,8 @@ gossip <- GET("https://www.ptt.cc/bbs/Gossiping/index.html",
               set_cookies(over18=1))$content %>% read_html
 (gossip_titles <- gossip %>% 
     html_nodes("div .title") %>% 
-    html_text())
+    html_text() %>%
+    iconv(from="utf8", to="utf8"))
 ```
 
 #### >> pattern replacing
@@ -907,6 +908,7 @@ crawlPttTitles <- function(npage, pat, target="Gossiping") {
     # get page index
     lastpage_idx <- response$content %>% read_html %>% 
         html_nodes("div .btn.wide") %>%
+        iconv(from="utf8", to="utf8") %>%
         grep("上頁", ., value=TRUE) %>% {
             as.integer(str_match(., "index([0-9]+)\\.html")[,2])
         }
@@ -923,10 +925,12 @@ crawlPttTitles <- function(npage, pat, target="Gossiping") {
         titles <- ptt %>%
             html_nodes("div .title") %>% 
             html_text() %>%
+            iconv(from="utf8", to="utf8") %>%
             gsub("\n\t*", '', .)
         nrec <- ptt %>%
             html_nodes("div .nrec") %>%
-            html_text()
+            html_text() %>%
+            iconv(from="utf8", to="utf8")
         res <- data.table(nrec=nrec, title=titles) %>%
             .[grepl(pat, title)]
     }
