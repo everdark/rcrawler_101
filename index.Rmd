@@ -3,7 +3,7 @@ title: "R Crawler 101: Week 3"
 subtitle: "play with facebook API and regular expression"
 author: 
     name: "Kyle Chung"
-    affiliation: "Trend Micro, Data Scientist"
+    affiliation: "Data Scientist, Trend Micro"
     email: "kylechun9@gmail.com"
     website: "https://github.com/everdark"
 date: '`r format(Sys.time(), "%d %B, %Y")`'
@@ -16,7 +16,9 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(cache=TRUE)
 options(width=120)
+library(RColorBrewer)
 library(data.table)
+library(wordcloud)
 library(magrittr)
 library(parallel)
 library(ggplot2)
@@ -109,7 +111,7 @@ multiple modifiers can be chained together
 + on edge:
     + `<photo_id>/likes?limit=1&summary=true`
 
-### > Exercise: Who likes me?
+### > Exercise: Who Likes Me?
 
 1. start from `me`
 2. is `posts` an edge or a field of `me`?
@@ -151,7 +153,7 @@ curl -i -X GET \
  "https://graph.facebook.com/v2.4/me?fields=context&access_token=CAACEdEose0cBAL34H6NiMZB3ZCnPaZBnShQoSY9GZCh81kDLbQZArxKGEPY981H7KfBUjG99jThga2OxQ7owu03IZCgoEcjMDmVSyeZAzos3JZBvWEzbRbfX0DZAl0Au2ybbbZCNZBOsZCYGmjKqCLyTHftwrnOerU07Pismb3QBxYommKEo7oGsWTIIREpbKu4VlHMJY7Q7ZBY00aAZDZD"
 ```
 
-### > Exercise: Get all metadata fields of the `me` node
+### > Exercise: Get all Metadata Fields of the `me` Node
 1. use a library that handles HTTP requests
 
 ```{r load httr}
@@ -170,7 +172,7 @@ library("httr")
 api_addr <- "https://graph.facebook.com/v2.4/me"
 
 # a valid token
-token <- "CAACEdEose0cBAFyHVA9ZCAW3doie9gJvrX650QZAllaZBt3BwowO5fTSAIPraNLjEaqa7jiUm1BWBvjcSfGBfUFzeUZC393GMR0GKDRZAoJvl0nVeXH6EaMZBL22ZBeBAFZAWmSZBrBdfpq1m2zekLKyZB3XG4J4tMNbZCqLZAoBfazk2Ma2KQsZAC6SJCXZAxjERym5ZCqGTsATWQ91QZDZD"
+token <- "CAACEdEose0cBANP9cpWekr6LdPyHLwPdzHZCfcYAfGX0FCGN8W2AIaWJPxbH5BGOmgycPRPcvgg8gtaEbySG3NwOBADud9kVSZCdw7Px7b84gO7SZCqfMusf3Y6vtuy6hySl2BNPD0tfi6mtu6MpvJvZCfz6Wyc51jfK8X9mNMW661mhYWLlAV6E6wvzdd6hfHOSZCGU3fAZDZD"
 
 # build the query string for the GET method
 qs <- list(metadata=1, access_token=token)
@@ -207,7 +209,7 @@ parsed_contents$metadata$connections %>%
     writeLines
 ```
 
-### > Exercise: Get all paginated data
+### > Exercise: Get all Paginated Data
 > Scenario: find a post, get a list of names from all users liked it
 
 1. **OBSERVE! OBSERVE! OBSERVE!**
@@ -296,7 +298,7 @@ all.equal(result1, result2) # should return T
 head(do.call(rbind, result1))
 ```
 
-### > Exercise: Plot trending of likes on `me/posts`
+### > Exercise: The Trending of Likes
 
 1. what do we need?
     + a starting time
@@ -468,7 +470,7 @@ like_trending2[name %in% top_likes$name[1:5]] %>%
     theme(text=element_text(family='Heiti TC Light')) # required to show chinese on OSX
 ```
 
-### > Exercise: The warrior of likes
+### > Exercise: The Warrior of Likes
 
 1. OBSERVE your friends
     + `me/friends`
@@ -609,7 +611,7 @@ deletePost(test_pid, token=token)
 # lapply(all_my_posts$pid, postLike, token=token)
 ```
 
-## Regular Expression
+## Regular Expression Basics
 
 ### > what is it?
 > ...a sequence of characters that define a search pattern, mainly for use in pattern matching with strings, or string matching, i.e. "find and replace"-like operations.
@@ -630,29 +632,212 @@ deletePost(test_pid, token=token)
 
 ### > a quick journey
 
-https://regex101.com/#python
+```{r re quick intro}
+if ( ! "rvest" %in% rownames(installed.packages()) )
+    install.packages("rvest")
+library("rvest")
+
+# crawl PTT Gossiping article titles
+gossip <- GET("https://www.ptt.cc/bbs/Gossiping/index.html",
+              set_cookies(over18=1))$content %>% read_html
+(gossip_titles <- gossip %>% 
+    html_nodes("div .title") %>% 
+    html_text())
+```
+
+#### >> pattern replacing
++ remove unwanted characters
+```{r re quick intro: replace}
+(gossip_titles_cleansed <- gsub("\n\t*", '', gossip_titles))
+```
+
+#### >> pattern filtering
++ search for titles with "[問卦]" only
+```{r re quick intro: filter 1}
+# something wrong?
+grep("[問卦]", gossip_titles_cleansed, value=TRUE) 
+
+# how about...
+grep("\\[問卦\\]", gossip_titles_cleansed, value=TRUE)
+```
+
++ don't want reply article!
+```{r re quick intro: filter 2}
+grep("^\\[問卦\\]", gossip_titles_cleansed, value=TRUE)
+```
+
++ only reply article
+```{r re quick intro: filter 3}
+grep("^Re: ", gossip_titles_cleansed, value=TRUE)
+```
+
++ titles with ending question mark
+```{r re quick intro: filter 4}
+grep("？$", gossip_titles_cleansed, value=TRUE)
+```
+
++ titles with any English alphabet
+```{r re quick intro: filter 5}
+grep("[a-zA-Z]", gossip_titles_cleansed, value=TRUE)
+```
 
 ### > basic components of RE
++ characters (string-literals)
+    + `ABCabc123`
++ meta-characters (operators)
+    + `. ^ $ * + ? { } [ ] \ | ( )`
++ special sequences (short-cuts)
+    + `\d \D \s \S \w \W \b \B`
 
-## Regular Expression in R
+#### >> wildcarder: `.`
++ match anything 
+    + *except* newline(`\n`) for *Perl* RE
+    + yes there are different versions of RE
+    + but the foundementals are essentially the same
+    
+```{r re basics: .}
+test_str <- c("hello world", "你好啊", "\n") 
+grep('.', test_str, value=TRUE, perl=TRUE)
+grep('.', test_str, value=TRUE, perl=FALSE)
+```
+
+#### >> bounders: `^` and `$`
++ `^` limits the begining character
++ `$` limits the ending character
+
+```{r re basics: ^$}
+grep('^hello', test_str, value=TRUE)
+grep('world$', test_str, value=TRUE)
+grep('^[h你]', test_str, value=TRUE)
+```
+
+#### >> repeaters: `*`, `+`, and `?`
++ `*`: the previous unit must repeat **0 or many times**
++ `+`: the previous unit must repeat **1 or many times**
++ `?`: the previous unit must repeat **0 or 1 times**
+
+```{r re basics: *+?}
+grep("l*", test_str, value=TRUE)
+grep("l+", test_str, value=TRUE)
+grep("l?", test_str, value=TRUE)
+```
+
+#### >> advanced repeaters: `{m,n}`
++ the previous unit must repeat **at least m times and at most n times**
+
+```{r re basics: {m,n}}
+grep("l{0,10}", test_str, value=TRUE)
+grep("l{2}", test_str, value=TRUE)
+grep("l{,2}", test_str, value=TRUE)
+grep("l{2,}", test_str, value=TRUE)
+```
+
+#### >> class: `[]`
++ a set of characters that *may* occcur
++ meta-char will lose their speacial meaning within it
+    + `[0-9$]` matches any of numbers 0 to 9 or the dollar sign($)
+    + here the bounder meta-char `$` is treated "as-is""
+    + special meaning only triggered within the class:
++ class-specific metas:
+    + `-`: ranger
+        + e.g., `[0-9a-zA-Z]`
+    + `^`: negator 
+        + e.g., `[^0-9]`
+
+```{r re basics: []}
+grep("[a-z]", test_str, value=TRUE)
+grep("[0-9]", test_str, value=TRUE)
+
+# want to match the dash (-) ?
+grep("[a-z-]", c("abc", "123-456"), value=TRUE)
+```
+
+#### >> grouper: `()`
++ to group multiple characters as one unit such that...
+    + all other metas will operate on the entire grouped char
+    + useful for pattern **match and extraction**
+
+```{r re basics: ()}
+test_str2 <- c("hello", "olleh", "hellohello")
+test_str2 %>% grep("^hello$", ., value=TRUE)
+test_str2 %>% grep("^[hello]$", ., value=TRUE)
+test_str2 %>% grep("^(hello)?$", ., value=TRUE)
+test_str2 %>% grep("^(hello)+$", ., value=TRUE)
+```
+
+#### >> or: `|`
++ to qualify one of multiple regex
+
+```{r re basics: |}
+grep("^h|^你", test_str, value=TRUE)
+```
+
+#### >> escaper: `\`
++ to make its following unit **as-is**
+    + the special meaning, if any, is said to be escaped
+    + escaper must be *doubled* in R
+        + due to language implementation
+        + may not be the case for using re in other languageg
+        
+```{r re basics: `\`}
+grep("^\\^", "^123", value=TRUE)
+```
+
+#### >> other special sequences
++ short-cut of specific character classes
++ `\d`: any decimal digit => `[0-9]`
++ `\D`: any non-digit => `[^0-9]`
++ `\s`: any white space => `[ \t\n\r\f\v]`
++ `\S`: any non-white space => `[^ \t\n\r\f\v]`
++ `\w`: any alphanumeric => `[a-zA-Z0-9_]`
++ `\W`: any non-alphanumeric => `[^a-zA-Z0-9_]`
++ `\b`: matches the empty string, but only at the beginning or end of a word (`\w`)
+
+## Regular Expression Facilities in R
 
 ### > `base::grep` and `base::grepl`
++ `grep`: match and return
+    + it is vectorized
+    + can return either **numeric index** or **original charaters**
+    + or return **logical vector** by using `grepl`
 
 ```{r grep}
-grep
+# return numeric index
+grep("^Re: ", gossip_titles_cleansed)
+
+# then can used as selecting vector
+gossip_titles_cleansed[grep("^Re: ", gossip_titles_cleansed)]
+
+# which effectively equals...
+grep("^Re: ", gossip_titles_cleansed, value=TRUE)
+
+# the no-match case
+grep("1p3fjhi1o", gossip_titles_cleansed)
+grep("1p3fjhi1o", gossip_titles_cleansed, value=TRUE)
+
+# the fixed patter: no re, all as-is
+grep("^Re: ", gossip_titles_cleansed, value=TRUE, fixed=TRUE)
+
+identical(grep("[新聞]", gossip_titles_cleansed, value=TRUE, fixed=TRUE),
+          grep("\\[新聞\\]", gossip_titles_cleansed, value=TRUE, fixed=FALSE))
 ```
 
 ### > `base::gsub`
++ **find and replace all**
+    + use `sub` to replace only once
++ also very useful for **find-and-delete all** scenario
 
 ```{r gsub}
-gsub
+gsub("\\].*", '', gossip_titles_cleansed)
+gsub("^.*\\[", '', gossip_titles_cleansed)
+gsub("\\].*|^.*\\[", '', gossip_titles_cleansed)
 ```
 
 ### > the `stringr` library
 + why use it?
     + more intuitive than the built-in RE facilities
     + developed by [Hadley Wickham](https://github.com/hadley/stringr)
-        + who also writes `httr`, and many others
+        + who also writes `httr`, `ggplot2`, and many others
 
 ```{r load stringr}
 if ( ! "stringr" %in% rownames(installed.packages()) )
@@ -661,37 +846,51 @@ library("stringr")
 ```
 
 #### >> usage: `str_extract` and `str_extract_all`
++ to match and full-pattern extract
++ can do many-to-many pattern matching, with recycling
+
+```{r stringr extract}
+# only the matched part will be returned; no-match resolves to NA
+str_extract(gossip_titles_cleansed, "\\[問卦\\]")
+str_extract(gossip_titles_cleansed, "\\[問卦\\].*")
+str_extract(gossip_titles_cleansed, "^\\[問卦\\] [A-Za-z]+")
+
+# match (amd extract) multiple times
+str_extract_all(gossip_titles_cleansed, "有", simplify=TRUE)
+
+# many-to-many pattern matching (with recycling)
+str_extract(letters, rep("[a-g]", 26))
+str_extract(letters, rep("[a-g]", 13))
+str_extract(letters, rep("[a-g]", 52))
+```
 
 #### >> usage: `str_match` and `str_match_all`
++ to match and partial-pattern extract
++ returned object is in compact matrix form
+
+```{r stringr match}
+# without grouper
+str_match(gossip_titles_cleansed, "\\[.*\\]")
+
+# with grouper
+str_match(gossip_titles_cleansed, "\\[(.*)\\]")
+str_match(gossip_titles_cleansed, "Re: \\[(.*)\\]")
+str_match(gossip_titles_cleansed, "\\[(.?)(.?)\\]")
+
+# mathc once or many times
+gossip_titles_cleansed %>% head %>% str_match("[a-z]")
+gossip_titles_cleansed %>% head %>% str_match_all("[a-z]")
+```
 
 ### > Exercise: PTT Gossiping Pattern Match
 
 ```{r ptt gossip, warning=FALSE}
-if ( ! "rvest" %in% rownames(installed.packages()) )
-    install.packages("rvest")
-library("rvest")
-
-# firstly, crawl the fron page
-gossip <- GET("https://www.ptt.cc/bbs/Gossiping/index.html",
-              set_cookies(over18=1))$content %>% read_html
-
-# then locate the paging index
-lastpage_idx <- gossip %>% html_nodes("div .btn.wide") %>%
-    grep("上頁", ., value=TRUE) %>% {
-        str_match(., "index([0-9]+)\\.html")[,2]
-    }
-
-# try some
-(gossip_titles <- gossip %>% 
-    html_nodes("div .title") %>% 
-    html_text())
-grep("[公告]", gossip_titles, value=TRUE)
-
-# now make a comprehensive function for multi-page crawling
-crawlGossip <- function(npage, pat) {
+# make a comprehensive function for multi-page crawling
+crawlPttTitles <- function(npage, pat, target="Gossiping") {
     
     require(data.table)
     require(parallel)
+    require(stringr)
     require(rvest)
     require(httr)
     
@@ -700,29 +899,32 @@ crawlGossip <- function(npage, pat) {
     on.exit(stopCluster(cl))
     
     # crawl front page
-    gossip <- GET("https://www.ptt.cc/bbs/Gossiping/index.html",
-              set_cookies(over18=1))$content %>% read_html
+    response <- GET(sprintf("https://www.ptt.cc/bbs/%s/index.html", target), 
+                  set_cookies(over18=1))
+    if ( (rcode <- response$status_code) != 200 )
+        stop(sprintf("Got status code %s.", rcode))
     
     # get page index
-    lastpage_idx <- gossip %>% html_nodes("div .btn.wide") %>%
+    lastpage_idx <- response$content %>% read_html %>% 
+        html_nodes("div .btn.wide") %>%
         grep("上頁", ., value=TRUE) %>% {
             as.integer(str_match(., "index([0-9]+)\\.html")[,2])
         }
-    all_pages <- sprintf("https://www.ptt.cc/bbs/Gossiping/index%s.html",
-                         (lastpage_idx+1):(lastpage_idx-npage+2))
+    all_pages <- sprintf("https://www.ptt.cc/bbs/%s/index%s.html",
+                         target, (lastpage_idx+1):(lastpage_idx-npage+2))
     
     # grep titles with given regex
     oneshot <- function(page_url, pat) {
         require(data.table)
         require(rvest)
         require(httr)
-        gossip <- GET(page_url,
+        ptt <- GET(page_url,
                   set_cookies(over18=1))$content %>% read_html
-        titles <- gossip %>%
+        titles <- ptt %>%
             html_nodes("div .title") %>% 
             html_text() %>%
             gsub("\n\t*", '', .)
-        nrec <- gossip %>%
+        nrec <- ptt %>%
             html_nodes("div .nrec") %>%
             html_text()
         res <- data.table(nrec=nrec, title=titles) %>%
@@ -734,7 +936,7 @@ crawlGossip <- function(npage, pat) {
 
 # check result
 system.time(
-    wanted <- crawlGossip(1000, "^\\[問卦\\] 有沒有.*的八卦？")
+    wanted <- crawlPttTitles(1000, "^\\[問卦\\] 有沒有.*的八卦？")
 )
 wanted %>% head
 
@@ -745,7 +947,7 @@ wanted <- wanted[grep("爆", nrec), cnt := 150L] %>%
     .[is.na(cnt), cnt:=as.integer(nrec)]
 ```
 
-```{r wordcloud, message=FALSE}
+```{r wordcloud, message=FALSE, warning=FALSE}
 # not enough? let's do some visualization
 library(RColorBrewer)
 library(wordcloud)
@@ -758,12 +960,137 @@ buzz <- str_match(wanted$title, "有沒有(.*)的八卦？")[,2] %T>%
     }
 ```
 
-## Appendix
+### > Exercise: PTT Moive Tagging
+
+```{r ptt movie}
+ptt_movie <- crawlPttTitles(1000, "^\\[.*雷\\]", "movie")
+    
+rei <- str_match(ptt_movie$title, "^\\[(.*)雷\\]《(.*)》") %>%
+    .[!is.na(.[,1]),-1] %>%
+    as.data.table %>% {
+        setnames(., c("rei", "title"))
+        setorder(., title)
+        .[, list(.N), by="title,rei"]
+    }
+head(rei, 20) %>% write.table(row.names=FALSE, col.names=FALSE, quote=FALSE)
+```
+
+### > Exercise: Dcard Article Crawling
+
++ Title only
+```{r dcard title}
+crawlDcardTitles <- function(target="bg", npage, pat) {
+    
+    require(data.table)
+    require(parallel)
+    require(stringr)
+    require(rvest)
+    require(httr)
+    
+    cl <- makeCluster(detectCores())
+    on.exit(stopCluster(cl))
+    
+    pages <- sprintf("https://www.dcard.tw/api/forum/%s/%s", target, 1:npage)
+    
+    crawlSinglePage <- function(page_url, pat) {
+        require(data.table)
+        require(rvest)
+        require(httr)
+        response <- GET(page_url)
+        if ( (rcode <- response$status_code) != 200 ) {
+            NULL
+        } else {
+            content(response) %>%
+                sapply(function(x) x$version[[1]]$title) %>%
+                grep(pat, ., value=TRUE)
+        }
+    }
+    parLapplyLB(cl, pages, crawlSinglePage, pat=pat) %>% unlist
+}
+
+system.time(
+    dcardtitles <- crawlDcardTitles("bg", 1000, "室友")
+)
+
+dcardtitles # rarer than what I thought...
+```
+
++ Dig into contents of articles
+```{r dcard content}
+crawlDcardArticles <- function(target="bg", npage, 
+                               title_pat=NULL, article_pat, npat) {
+    
+    require(parallel)
+    require(rvest)
+    require(httr)
+    
+    cl <- makeCluster(detectCores())
+    on.exit(stopCluster(cl))
+    
+    pages <- sprintf("https://www.dcard.tw/api/forum/%s/%s", target, 1:npage)
+    
+    crawlSinglePageTitleId <- function(page_url, pat) {
+        require(rvest)
+        require(httr)
+        response <- GET(page_url)
+        if ( (rcode <- response$status_code) != 200 ) {
+            NULL
+        } else {
+            json <- content(response)
+            if ( !is.null(pat) ) {
+                idx <- sapply(json, function(x) x$version[[1]]$title) %>%
+                    grep(pat, .)
+                sapply(json[idx], function(x) x$id)
+            } else {
+                content(response) %>% sapply(function(x) x$id)    
+            }
+        }
+    }
+    
+    crawlSingleArticle <- function(page_url, pat, npat) {
+        require(stringr)
+        require(rvest)
+        require(httr)
+        response <- GET(page_url)
+        if ( (rcode <- response$status_code) != 200 ) {
+            NULL
+        } else {
+            json <- content(response)
+            matched_len <- json$version[[1]]$content %>%
+                str_match_all(pat) %>% 
+                unlist %>% 
+                length
+            if  ( matched_len >= npat ) {
+                json$version[[1]]$content
+            } else {
+                NULL
+            }
+        }
+    }
+    
+    parLapplyLB(cl, pages, crawlSinglePageTitleId, pat=title_pat) %>% 
+        unlist %>% 
+        sprintf("https://www.dcard.tw/api/post/%s/%s", target, .) %>%
+        parLapplyLB(cl, ., crawlSingleArticle, 
+                    pat=article_pat, npat=npat) %>% 
+        unlist
+}
+
+system.time(
+    dcardarticles <- crawlDcardArticles("bg", 100, article_pat="室友", npat=3)    
+)
+
+length(dcardarticles)
+
+dcardarticles %>% head %>% substr(start=1, stop=100)
+```
+
 
 ## References
 + Facebook Graph API [official doc](https://developers.facebook.com/docs/graph-api)
 + [stringr vignettes](https://cran.r-project.org/web/packages/stringr/vignettes/stringr.html)
 + [httr quickstart guide](https://cran.r-project.org/web/packages/httr/vignettes/quickstart.html)
++ [magrittr vignettes](https://cran.r-project.org/web/packages/magrittr/vignettes/magrittr.html)
 
 ## Other Useful Materials
 + learning R: a programmer-oriented introduction
@@ -773,5 +1100,5 @@ buzz <- str_match(wanted$title, "有沒有(.*)的八卦？")[,2] %T>%
     + [the data.table cheatsheet](http://www.r-bloggers.com/the-data-table-cheat-sheet/)
 + learning `ggplot2`
     + [everdark/ggplot2_lecture_dsc2015](http://everdark.github.io/ggplot2_lecture_dsc2015/)
-+ same materials but in Python
++ similar materials but in Python
     + [everdark/pycrawler_101](http://everdark.github.io/pycrawler_101/#/)
