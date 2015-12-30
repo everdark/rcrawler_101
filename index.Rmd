@@ -172,7 +172,7 @@ library("httr")
 api_addr <- "https://graph.facebook.com/v2.4/me"
 
 # a valid token
-token <- "CAACEdEose0cBANP9cpWekr6LdPyHLwPdzHZCfcYAfGX0FCGN8W2AIaWJPxbH5BGOmgycPRPcvgg8gtaEbySG3NwOBADud9kVSZCdw7Px7b84gO7SZCqfMusf3Y6vtuy6hySl2BNPD0tfi6mtu6MpvJvZCfz6Wyc51jfK8X9mNMW661mhYWLlAV6E6wvzdd6hfHOSZCGU3fAZDZD"
+token <- "CAACEdEose0cBALIKfpOJ9cZBmZCa02ZBuZAGzg7wumfcjJNexUVz3ObOTaIE1U4E8R8GlBLSeM3lHeLiXoZCyEYXmrqeAZBP2LhnTyZATuxJI3ZB2pMp4OusOdPcgIcTQdvqYWUlIRPP4SUfi10Sf1jUZB3BU42EdZAHdFALRjg3xOj5KF41SyoBK79zXx6bR6NhhWSSZAiLpN3JSStsh9clAZBZB"
 
 # build the query string for the GET method
 qs <- list(metadata=1, access_token=token)
@@ -920,18 +920,17 @@ crawlPttTitles <- function(npage, pat, target="Gossiping") {
         require(data.table)
         require(rvest)
         require(httr)
-        ptt <- GET(page_url,
-                  set_cookies(over18=1))$content %>% read_html
-        titles <- ptt %>%
-            html_nodes("div .title") %>% 
-            html_text() %>%
-            iconv(from="utf8", to="utf8") %>%
+        ptt <- GET(page_url, set_cookies(over18=1))$content %>% read_html
+        title_a <- html_nodes(ptt, "div .title a")
+        titles <- html_text(title_a) %>%
+            iconv(from="utf8", to="utf8") %>% # for Windows
             gsub("\n\t*", '', .)
-        nrec <- ptt %>%
-            html_nodes("div .nrec") %>%
-            html_text() %>%
-            iconv(from="utf8", to="utf8")
-        res <- data.table(nrec=nrec, title=titles) %>%
+        links <- html_attr(title_a, "href") %>% 
+            iconv(from="utf8", to="utf8") # for Windows
+        nrec <- html_nodes(ptt, "div .nrec") %>%
+            html_text %>%
+            iconv(from="utf8", to="utf8") # for Windows
+        res <- data.table(nrec=nrec, title=titles, link=links) %>%
             .[grepl(pat, title)]
     }
     res <- parLapplyLB(cl, all_pages, oneshot, pat=pat)
@@ -962,6 +961,14 @@ buzz <- str_match(wanted$title, "有沒有(.*)的八卦？")[,2] %T>%
                   rot.per=0, fixed.asp=FALSE,
                   colors=brewer.pal(8, name="Set2"), random.color=TRUE)
     }
+```
+
+```{r other usage}
+# some other usage
+system.time(
+    wanted <- crawlPttTitles(1000, "咖啡[店廳]", target="Beauty")
+)
+wanted %>% head
 ```
 
 ### > Exercise: PTT Moive Tagging
