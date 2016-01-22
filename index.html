@@ -331,7 +331,7 @@ library(&quot;httr&quot;)</code></pre>
 api_addr &lt;- &quot;https://graph.facebook.com/v2.4/me&quot;
 
 # a valid token
-token &lt;- &quot;CAACEdEose0cBANFZBRTbr6T3FSQ2XZBFbUMQFH0RveWKJubi76xWbnjnZBBU8xq6nCdDFePqnkMkJqnH2QHR8xbdsIaSGabo3kY1CszsOzF88C1mJZA2Xm48s2GXcDahy3ossOQlgBG0hBa0ZBpPffwkLAUB2gH3IrvqiQ1O9XuZCWIvve0HpFMJ1ZCkOstcHkMwy5TYu25SQZDZD&quot;
+token &lt;- &quot;CAACEdEose0cBAPZC40ytYxVPs1y2vOm6pL4qcQY8sIVeK6e3ncJzog2ZA5qMi6X1ZBd5SlycMvo0pTb6FaZBSIOvA6EZByHe5y2T0SgWHGWajzHWTi375ht8jq8eajLUC1x1JZBfOZBjYZAOMYkRVrBZBkPW6QjjhW3FGj1ZAVVzGm71PVk3XZCrSLECGUNgVEwTLS1g4XcbhXXXgZDZD&quot;
 
 # build the query string for the GET method
 qs &lt;- list(metadata=1, access_token=token)</code></pre>
@@ -1005,32 +1005,28 @@ library(&quot;rvest&quot;)
 # crawl PTT Gossiping article titles
 gossip &lt;- GET(&quot;https://www.ptt.cc/bbs/Gossiping/index.html&quot;,
               set_cookies(over18=1))$content %&gt;% read_html
-(gossip_titles &lt;- gossip %&gt;% 
+(
+gossip_titles &lt;- gossip %&gt;% 
     html_nodes(&quot;div .title&quot;) %&gt;% 
-    html_text())</code></pre>
-<pre><code>##  [1] &quot;\n\t\t\t\n\t\t\t\tRe: [問卦] 有沒有生鐵鍋的八卦\n\t\t\t\n\t\t\t&quot;                      
-##  [2] &quot;\n\t\t\t\n\t\t\t\t[問卦] 有沒有凌晨三點鐘電視機自己開的八卦\n\t\t\t\n\t\t\t&quot;          
-##  [3] &quot;\n\t\t\t\n\t\t\t\tRe: [新聞] 旅行社接到通知...3月後陸客將銳減三分之一\n\t\t\t\n\t\t\t&quot;
-##  [4] &quot;\n\t\t\t\n\t\t\t\tRe: [新聞] 「柯市漲」又要錢　搭貓纜70元起跳\n\t\t\t\n\t\t\t&quot;        
-##  [5] &quot;\n\t\t\t\n\t\t\t\t[新聞] 美國這次很挺喔!美智庫:小英已對北京釋\n\t\t\t\n\t\t\t&quot;        
-##  [6] &quot;\n\t\t\t\n\t\t\t\tRe: [問卦] 台灣對中國的魅力到底在哪裡\n\t\t\t\n\t\t\t&quot;              
-##  [7] &quot;\n\t\t\t\n\t\t\t\tRe: [爆卦] NCC中嘉案公聽會開始了（黃國昌出席）\n\t\t\t\n\t\t\t&quot;     
-##  [8] &quot;\n\t\t\t\n\t\t\t\tRe: [新聞] 「柯市漲」又要錢　搭貓纜70元起跳\n\t\t\t\n\t\t\t&quot;        
-##  [9] &quot;\n\t\t\t\n\t\t\t\t(本文已被刪除) [kisweet999]\n\t\t\t\n\t\t\t&quot;                        
-## [10] &quot;\n\t\t\t\n\t\t\t\tRe: [新聞] 旅行社接到通知...3月後陸客將銳減三分之一\n\t\t\t\n\t\t\t&quot;
-## [11] &quot;\n\t\t\t\n\t\t\t\t[問卦] 怎樣的景點在座魯宅會一去再去？\n\t\t\t\n\t\t\t&quot;              
-## [12] &quot;\n\t\t\t\n\t\t\t\tRe: [問卦] 陸客不來倒楣的到底是誰?\n\t\t\t\n\t\t\t&quot;                 
-## [13] &quot;\n\t\t\t\n\t\t\t\tRe: [爆卦] KMT臥底記(?\n\t\t\t\n\t\t\t&quot;                             
-## [14] &quot;\n\t\t\t\n\t\t\t\t[新聞] 傳多人因低溫死亡 新北消防：無法斷定\n\t\t\t\n\t\t\t&quot;         
-## [15] &quot;\n\t\t\t\n\t\t\t\tRe: [ＦＢ] 馬英九八年感謝文-林雅強\n\t\t\t\n\t\t\t&quot;                 
-## [16] &quot;\n\t\t\t\n\t\t\t\t[問卦] 米國的戰機設計有問題?\n\t\t\t\n\t\t\t&quot;                       
-## [17] &quot;\n\t\t\t\n\t\t\t\t[問卦] 400g阿華田的巧克力醬夠肥宅吃幾天?\n\t\t\t\n\t\t\t&quot;           
-## [18] &quot;\n\t\t\t\n\t\t\t\t[問卦] 為何中東人會入侵歐洲？\n\t\t\t\n\t\t\t&quot;                      
-## [19] &quot;\n\t\t\t\n\t\t\t\t[公告] 八卦板板規(2015.12.01)\n\t\t\t\n\t\t\t&quot;                      
-## [20] &quot;\n\t\t\t\n\t\t\t\tFw: [徵求] 1/20行車紀錄器，九里路上(里港往九如)\n\t\t\t\n\t\t\t&quot;    
-## [21] &quot;\n\t\t\t\n\t\t\t\tFw: [徵求] 基隆中華路死亡車禍現場監視器或行車記錄器\n\t\t\t\n\t\t\t&quot;
-## [22] &quot;\n\t\t\t\n\t\t\t\t[協尋] 1/20台中死亡車禍 徵目擊\n\t\t\t\n\t\t\t&quot;                     
-## [23] &quot;\n\t\t\t\n\t\t\t\t[公告] 2016一月置底689閒聊區\n\t\t\t\n\t\t\t&quot;</code></pre>
+    html_text %&gt;% 
+    iconv(from=&quot;utf8&quot;, to=&quot;utf8&quot;) # for Windows
+)</code></pre>
+<pre><code>##  [1] &quot;\n\t\t\t\n\t\t\t\tRe: [新聞] 中油調高加油站毛利 下週油價降幅恐減\n\t\t\t\n\t\t\t&quot;     
+##  [2] &quot;\n\t\t\t\n\t\t\t\t[問卦] 是不想被統一? 還是不想被中國統一?\n\t\t\t\n\t\t\t&quot;           
+##  [3] &quot;\n\t\t\t\n\t\t\t\t[問卦] 有沒有什麼工作是和想像中完全不同的？\n\t\t\t\n\t\t\t&quot;        
+##  [4] &quot;\n\t\t\t\n\t\t\t\t[問卦] 從救世主變成過街老鼠是什麼感覺？\n\t\t\t\n\t\t\t&quot;            
+##  [5] &quot;\n\t\t\t\n\t\t\t\t[新聞] 今年數學「15級分」增加　考「半衰期」\n\t\t\t\n\t\t\t&quot;        
+##  [6] &quot;\n\t\t\t\n\t\t\t\t[爆卦] 嘉義好市多之持續秒退滅頂\n\t\t\t\n\t\t\t&quot;                    
+##  [7] &quot;\n\t\t\t\n\t\t\t\t[問卦] 為何阿嘎不跟藏鏡人在一起?\n\t\t\t\n\t\t\t&quot;                   
+##  [8] &quot;\n\t\t\t\n\t\t\t\tRe: [問卦] 國民黨有誰有能力爭黨主席？\n\t\t\t\n\t\t\t&quot;              
+##  [9] &quot;\n\t\t\t\n\t\t\t\tRe: [問卦] 有沒有今年學測數學題目的八卦\n\t\t\t\n\t\t\t&quot;            
+## [10] &quot;\n\t\t\t\n\t\t\t\tRe: [問卦] 遊樂園裡最危險的是海盜船嗎?\n\t\t\t\n\t\t\t&quot;             
+## [11] &quot;\n\t\t\t\n\t\t\t\t[問卦] 有沒有關雲\&quot;長\&quot;怎麼唸的八卦?\n\t\t\t\n\t\t\t&quot;               
+## [12] &quot;\n\t\t\t\n\t\t\t\t[公告] 八卦板板規(2015.12.01)\n\t\t\t\n\t\t\t&quot;                      
+## [13] &quot;\n\t\t\t\n\t\t\t\tFw: [徵求] 1/20行車紀錄器，九里路上(里港往九如)\n\t\t\t\n\t\t\t&quot;    
+## [14] &quot;\n\t\t\t\n\t\t\t\t[協尋] 1/20台中死亡車禍 徵目擊\n\t\t\t\n\t\t\t&quot;                     
+## [15] &quot;\n\t\t\t\n\t\t\t\tFw: [協尋] 1/19早上6:30行經台南北安橋上的行車記錄器\n\t\t\t\n\t\t\t&quot;
+## [16] &quot;\n\t\t\t\n\t\t\t\t[公告] 2016一月置底689閒聊區\n\t\t\t\n\t\t\t&quot;</code></pre>
 <div id="pattern-replacing" class="section level4">
 <h4>&gt;&gt; pattern replacing</h4>
 <ul>
@@ -1579,6 +1575,7 @@ crawlPttTitles &lt;- function(npage, pat, target=&quot;Gossiping&quot;) {
     # get page index
     lastpage_idx &lt;- response$content %&gt;% read_html %&gt;% 
         html_nodes(&quot;div .btn.wide&quot;) %&gt;%
+        iconv(from=&quot;utf8&quot;, to=&quot;utf8&quot;) %&gt;% # for Windows
         grep(&quot;上頁&quot;, ., value=TRUE) %&gt;% {
             as.integer(str_match(., &quot;index([0-9]+)\\.html&quot;)[,2])
         }
@@ -1590,16 +1587,17 @@ crawlPttTitles &lt;- function(npage, pat, target=&quot;Gossiping&quot;) {
         require(data.table)
         require(rvest)
         require(httr)
-        ptt &lt;- GET(page_url,
-                  set_cookies(over18=1))$content %&gt;% read_html
-        titles &lt;- ptt %&gt;%
-            html_nodes(&quot;div .title&quot;) %&gt;% 
-            html_text() %&gt;%
+        ptt &lt;- GET(page_url, set_cookies(over18=1))$content %&gt;% read_html
+        title_a &lt;- html_nodes(ptt, &quot;div .title a&quot;)
+        titles &lt;- html_text(title_a) %&gt;%
+            iconv(from=&quot;utf8&quot;, to=&quot;utf8&quot;) %&gt;% # for Windows
             gsub(&quot;\n\t*&quot;, '', .)
-        nrec &lt;- ptt %&gt;%
-            html_nodes(&quot;div .nrec&quot;) %&gt;%
-            html_text()
-        res &lt;- data.table(nrec=nrec, title=titles) %&gt;%
+        links &lt;- html_attr(title_a, &quot;href&quot;) %&gt;% 
+            iconv(from=&quot;utf8&quot;, to=&quot;utf8&quot;) # for Windows
+        nrec &lt;- html_nodes(ptt, &quot;div .nrec&quot;) %&gt;%
+            html_text %&gt;%
+            iconv(from=&quot;utf8&quot;, to=&quot;utf8&quot;) # for Windows
+        res &lt;- data.table(nrec=nrec, title=titles, link=links) %&gt;%
             .[grepl(pat, title)]
     }
     res &lt;- parLapplyLB(cl, all_pages, oneshot, pat=pat)
@@ -1611,15 +1609,15 @@ system.time(
     wanted &lt;- crawlPttTitles(1000, &quot;^\\[問卦\\] 有沒有.*的八卦？&quot;)
 )</code></pre>
 <pre><code>##    user  system elapsed 
-##   0.054   0.013  28.720</code></pre>
+##   0.067   0.015  41.055</code></pre>
 <pre class="r"><code>wanted %&gt;% head</code></pre>
-<pre><code>##    nrec                                        title
-## 1:   11 [問卦] 有沒有 三歲學洪拳 四歲學詠春 的八卦？
-## 2:    9              [問卦] 有沒有小雪的八卦？(節氣)
-## 3:   46  [問卦] 有沒有死侍台灣首映會規模誇張的八卦？
-## 4:    9                    [問卦] 有沒有綠蓋的八卦？
-## 5:   14  [問卦] 有沒有可惡的低收入戶怎麼檢舉的八卦？
-## 6:    2                [問卦] 有沒有名校bar的八卦？</code></pre>
+<pre><code>##    nrec                                        title                                   link
+## 1:    4                  [問卦] 有沒有張文綺的八卦？ /bbs/Gossiping/M.1453474002.A.478.html
+## 2:    2                  [問卦] 有沒有張文綺的八卦？ /bbs/Gossiping/M.1453474002.A.478.html
+## 3:    3        [問卦] 有沒有小川悅司中華一番的八卦？ /bbs/Gossiping/M.1453473531.A.227.html
+## 4:             [問卦] 有沒有小川悅司中華一番的八卦？ /bbs/Gossiping/M.1453473531.A.227.html
+## 5:   12 [問卦] 有沒有人名+無慘就有種特別味道的八卦？ /bbs/Gossiping/M.1453471193.A.2EE.html
+## 6:    9      [問卦] 有沒有遊戲暱稱硬要用本名的八卦？ /bbs/Gossiping/M.1453465572.A.E7A.html</code></pre>
 <pre class="r"><code># tidy result
 wanted &lt;- wanted[grep(&quot;爆&quot;, nrec), cnt := 150L] %&gt;%
     .[grep(&quot;^X&quot;, nrec), cnt := 0L] %&gt;%
