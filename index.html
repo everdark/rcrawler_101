@@ -66,7 +66,7 @@ img {
 <address class="author_afil">
 Data Scientist, Trend Micro<br><a class="author_email" href="mailto:#"><a href="mailto:kylechun9@gmail.com">kylechun9@gmail.com</a></a>
 </address>
-<h4 class="date"><em>22 January, 2016</em></h4>
+<h4 class="date"><em>23 January, 2016</em></h4>
 </div>
 
 <div id="TOC">
@@ -1588,17 +1588,25 @@ crawlPttTitles &lt;- function(npage, pat, target=&quot;Gossiping&quot;) {
         require(rvest)
         require(httr)
         ptt &lt;- GET(page_url, set_cookies(over18=1))$content %&gt;% read_html
-        title_a &lt;- html_nodes(ptt, &quot;div .title a&quot;)
-        titles &lt;- html_text(title_a) %&gt;%
+        # deleted posts dont have &lt;a href&gt;&lt;/a&gt;
+        not_deleted &lt;- html_nodes(ptt, &quot;div .title&quot;) %&gt;% 
+            as.character %&gt;% 
+            grepl(&quot;&lt;a href&quot;, .)
+        titles &lt;- html_nodes(ptt, &quot;div .title&quot;) %&gt;%
+            html_text %&gt;%
             iconv(from=&quot;utf8&quot;, to=&quot;utf8&quot;) %&gt;% # for Windows
-            gsub(&quot;\n\t*&quot;, '', .)
-        links &lt;- html_attr(title_a, &quot;href&quot;) %&gt;% 
+            gsub(&quot;\n\t*&quot;, '', .) %&gt;%
+            .[not_deleted]
+        links &lt;- html_nodes(ptt, &quot;div .title a&quot;) %&gt;%
+            html_attr(&quot;href&quot;) %&gt;% 
             iconv(from=&quot;utf8&quot;, to=&quot;utf8&quot;) # for Windows
         nrec &lt;- html_nodes(ptt, &quot;div .nrec&quot;) %&gt;%
             html_text %&gt;%
-            iconv(from=&quot;utf8&quot;, to=&quot;utf8&quot;) # for Windows
+            iconv(from=&quot;utf8&quot;, to=&quot;utf8&quot;) %&gt;% # for Windows
+            .[not_deleted]
         res &lt;- data.table(nrec=nrec, title=titles, link=links) %&gt;%
             .[grepl(pat, title)]
+        res
     }
     res &lt;- parLapplyLB(cl, all_pages, oneshot, pat=pat)
     res[sapply(res, function(x) length(x) &gt; 0)] %&gt;% rbindlist
@@ -1606,18 +1614,18 @@ crawlPttTitles &lt;- function(npage, pat, target=&quot;Gossiping&quot;) {
 
 # check result
 system.time(
-    wanted &lt;- crawlPttTitles(1000, &quot;^\\[問卦\\] 有沒有.*的八卦？&quot;)
+    wanted &lt;- crawlPttTitles(1000, &quot;^\\[問卦\\] 有沒有.*的八卦[？?]&quot;)
 )</code></pre>
 <pre><code>##    user  system elapsed 
-##   0.067   0.015  41.055</code></pre>
+##   0.295   0.036  45.860</code></pre>
 <pre class="r"><code>wanted %&gt;% head</code></pre>
-<pre><code>##    nrec                                        title                                   link
-## 1:    4                  [問卦] 有沒有張文綺的八卦？ /bbs/Gossiping/M.1453474002.A.478.html
-## 2:    2                  [問卦] 有沒有張文綺的八卦？ /bbs/Gossiping/M.1453474002.A.478.html
-## 3:    3        [問卦] 有沒有小川悅司中華一番的八卦？ /bbs/Gossiping/M.1453473531.A.227.html
-## 4:             [問卦] 有沒有小川悅司中華一番的八卦？ /bbs/Gossiping/M.1453473531.A.227.html
-## 5:   12 [問卦] 有沒有人名+無慘就有種特別味道的八卦？ /bbs/Gossiping/M.1453471193.A.2EE.html
-## 6:    9      [問卦] 有沒有遊戲暱稱硬要用本名的八卦？ /bbs/Gossiping/M.1453465572.A.E7A.html</code></pre>
+<pre><code>##    nrec                                title                                   link
+## 1:          [問卦] 有沒有當完兵後變笨的八卦? /bbs/Gossiping/M.1453480878.A.2ED.html
+## 2:   11      [問卦] 有沒有寒流還沒來的八卦？ /bbs/Gossiping/M.1453480326.A.095.html
+## 3:    6 [問卦] 有沒有冬季到台北來看雪的八卦? /bbs/Gossiping/M.1453480570.A.B1E.html
+## 4:    9       [問卦] 有沒有漢字拉丁化的八卦? /bbs/Gossiping/M.1453479929.A.654.html
+## 5:    6             [問卦] 有沒有冰雨的八卦? /bbs/Gossiping/M.1453480272.A.94F.html
+## 6:            [問卦] 有沒有非洲螢火蟲的八卦? /bbs/Gossiping/M.1453479677.A.670.html</code></pre>
 <pre class="r"><code># tidy result
 wanted &lt;- wanted[grep(&quot;爆&quot;, nrec), cnt := 150L] %&gt;%
     .[grep(&quot;^X&quot;, nrec), cnt := 0L] %&gt;%
